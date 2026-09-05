@@ -36,6 +36,7 @@ end
 function SLVL.Sync(ply)
     if not IsValid(ply) or not ply.SLVL then return end
     local d = ply.SLVL
+    ply:SetNWInt("slvl_level", d.level) -- lisible par tous (scoreboard)
     net.Start("slvl_sync")
         net.WriteUInt(d.level, 16)
         net.WriteUInt(math.max(0, d.xp), 32)
@@ -52,41 +53,21 @@ end
 ----------------------------------------------------------------------
 -- Application des effets PV / vitesse (par-dessus la race)
 ----------------------------------------------------------------------
-function SLVL.ApplyToPlayer(ply, fullHeal)
-    if not IsValid(ply) or not ply:Alive() or not ply.SLVL then return end
-    local d = ply.SLVL
-    local vita = SLVL.PointsToPct(d.vitalite) / 100
-    local agil = SLVL.PointsToPct(d.agilite) / 100
-
-    local raceId = (BLOOD.GetActiveRaceId and BLOOD.GetActiveRaceId(ply)) or "human"
-    local race = (BLOOD.GetRace and BLOOD.GetRace(raceId)) or { hp = 1, speed = 1 }
-    local cfg = BLOOD.Config
-
-    local baseHP = (cfg.BaseHealth or 100) * (race.hp or 1)
-    local finalMax = math.max(1, math.Round(baseHP * (1 + vita)))
-    local oldMax, oldHP = ply:GetMaxHealth(), ply:Health()
-    ply:SetMaxHealth(finalMax)
-    if fullHeal then
-        ply:SetHealth(finalMax)
-    else
-        local add = math.max(0, finalMax - oldMax)
-        ply:SetHealth(math.min(finalMax, oldHP + add))
-    end
-
-    local baseWalk = (cfg.BaseWalkSpeed or 200) * (race.speed or 1)
-    local baseRun  = (cfg.BaseRunSpeed or 400) * (race.speed or 1)
-    ply:SetWalkSpeed(math.max(1, math.Round(baseWalk * (1 + agil))))
-    ply:SetRunSpeed(math.max(1, math.Round(baseRun * (1 + agil))))
-end
-
--- Appliqué après la race (spawn / reroll / changement de slot).
-hook.Add("BLOOD_PostApplyStats", "SLVL_Apply", function(ply)
+-- Contribution au calcul des stats : multiplie PV/vitesse selon les points.
+--  (Le job pose la base, la race multiplie, le niveau multiplie ici.)
+hook.Add("BLOOD_ComputeStats", "SLVL_Compute", function(ply, stats)
     local slot = ply.BloodActiveSlot or 1
     if ply.SLVLSlot ~= slot or not ply.SLVL then
         ply.SLVL = SLVL.SQL.Get(ply:SteamID64(), slot)
         ply.SLVLSlot = slot
     end
-    SLVL.ApplyToPlayer(ply, true)
+    local d = ply.SLVL
+    stats.hpMul    = stats.hpMul    * (1 + SLVL.PointsToPct(d.vitalite) / 100)
+    stats.speedMul = stats.speedMul * (1 + SLVL.PointsToPct(d.agilite) / 100)
+end)
+
+-- Après application des stats : synchro HUD + réseau du niveau.
+hook.Add("BLOOD_PostApplyStats", "SLVL_Sync", function(ply)
     SLVL.Sync(ply)
 end)
 
@@ -163,7 +144,7 @@ net.Receive("slvl_spend", function(_, ply)
     if ply.SLVL[key] >= C.MaxPointsPerStat then notify(ply, "Statistique au maximum.", "error") return end
     ply.SLVL[key] = ply.SLVL[key] + 1
     SLVL.Save(ply)
-    SLVL.ApplyToPlayer(ply, false)
+    if BLOOD.ApplyComputedStats then BLOOD.ApplyComputedStats(ply, false) end
     SLVL.Sync(ply)
     ply:EmitSound(C.SpendSound)
 end)
@@ -175,7 +156,7 @@ net.Receive("slvl_respec", function(_, ply)
     ply.SLVL.reset = ply.SLVL.reset - 1
     ply.SLVL.force, ply.SLVL.resist, ply.SLVL.agilite, ply.SLVL.vitalite = 0, 0, 0, 0
     SLVL.Save(ply)
-    SLVL.ApplyToPlayer(ply, true)
+    if BLOOD.ApplyComputedStats then BLOOD.ApplyComputedStats(ply, true) end
     SLVL.Sync(ply)
     notify(ply, "Tes points ont été réinitialisés.", "info")
 end)
@@ -205,7 +186,7 @@ local function adminCommit(sid, slot, d)
         ply.SLVL = d
         ply.SLVLSlot = slot
         SLVL.SQL.Set(sid, slot, d)
-        SLVL.ApplyToPlayer(ply, true)
+        if BLOOD.ApplyComputedStats then BLOOD.ApplyComputedStats(ply, true) end
         SLVL.Sync(ply)
     else
         SLVL.SQL.Set(sid, slot, d)

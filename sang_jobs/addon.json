@@ -1,0 +1,6 @@
+{
+    "title": "Sang et Nuit — Jobs, F4 & Scoreboard",
+    "type": "servercontent",
+    "tags": ["roleplay", "build"],
+    "ignore": ["*.md", "*.txt", ".git/*", ".gitignore"]
+}

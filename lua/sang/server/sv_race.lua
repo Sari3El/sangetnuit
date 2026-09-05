@@ -61,25 +61,63 @@ end
 ----------------------------------------------------------------------
 -- Application des stats de la race active au joueur (spawn / changement)
 ----------------------------------------------------------------------
-function BLOOD.ApplyRaceStats(ply)
-    if not IsValid(ply) or not ply:IsPlayer() then return end
-
+--- Point d'assemblage des stats. Renvoie une table :
+--    baseHP   : PV de base (les jobs la remplacent)
+--    armor    : armure (les jobs la posent)
+--    baseWalk / baseRun : vitesses moteur de base
+--    hpMul    : multiplicateur PV (race puis niveau)
+--    speedMul : multiplicateur vitesse (race puis job puis niveau)
+--  Modèle : PV = baseHP × hpMul ; vitesse = baseWalk/run × speedMul.
+--  Les autres addons écoutent "BLOOD_ComputeStats" pour composer :
+--    jobs -> posent baseHP / armor et multiplient speedMul ;
+--    niveaux -> multiplient hpMul / speedMul.
+function BLOOD.ComputeStats(ply)
     local C = BLOOD.Config
     local race = BLOOD.GetRace(BLOOD.GetActiveRaceId(ply))
+    local stats = {
+        baseHP   = C.BaseHealth,
+        armor    = 0,
+        baseWalk = C.BaseWalkSpeed,
+        baseRun  = C.BaseRunSpeed,
+        hpMul    = race.hp or 1,      -- race (× niveau ensuite)
+        speedMul = race.speed or 1,   -- race (× job × niveau ensuite)
+    }
+    hook.Run("BLOOD_ComputeStats", ply, stats)
+    return stats
+end
 
-    -- PV / PV max
-    local maxhp = math.max(1, math.Round(C.BaseHealth * (race.hp or 1)))
+--- Applique les stats calculées. fullHeal=true met les PV au max (spawn/reroll/
+--  changement) ; false conserve les PV courants (ajoute juste le delta de max).
+function BLOOD.ApplyComputedStats(ply, fullHeal)
+    if not IsValid(ply) or not ply:Alive() then return end
+    local C = BLOOD.Config
+    local s = BLOOD.ComputeStats(ply)
+
+    local maxhp = math.max(1, math.Round(s.baseHP * s.hpMul))
+    local oldMax, oldHP = ply:GetMaxHealth(), ply:Health()
     ply:SetMaxHealth(maxhp)
-    ply:SetHealth(maxhp)
-
-    -- Vitesse (walk + run)
-    ply:SetWalkSpeed(math.max(1, math.Round(C.BaseWalkSpeed * (race.speed or 1))))
-    ply:SetRunSpeed(math.max(1, math.Round(C.BaseRunSpeed * (race.speed or 1))))
-
-    -- Saut : RÈGLE = ne jamais modifier (sauf option d'uniformisation explicite)
-    if C.EnforceDefaultJump then
-        ply:SetJumpPower(C.DefaultJumpPower)
+    if fullHeal then
+        ply:SetHealth(maxhp)
+    else
+        ply:SetHealth(math.min(maxhp, oldHP + math.max(0, maxhp - oldMax)))
     end
+
+    local armor = math.max(0, math.floor(s.armor))
+    ply:SetArmor(armor)
+    ply:SetMaxArmor(armor > 0 and armor or 100)
+
+    ply:SetWalkSpeed(math.max(1, math.Round(s.baseWalk * s.speedMul)))
+    ply:SetRunSpeed(math.max(1, math.Round(s.baseRun * s.speedMul)))
+
+    if C.EnforceDefaultJump then ply:SetJumpPower(C.DefaultJumpPower) end
+end
+
+----------------------------------------------------------------------
+-- Application des stats de la race active au joueur (spawn / changement)
+----------------------------------------------------------------------
+function BLOOD.ApplyRaceStats(ply)
+    if not IsValid(ply) or not ply:IsPlayer() then return end
+    local race = BLOOD.GetRace(BLOOD.GetActiveRaceId(ply))
 
     -- SWEP de race
     BLOOD.GiveRaceWeapons(ply, race)
@@ -90,8 +128,10 @@ function BLOOD.ApplyRaceStats(ply)
     if BLOOD.GetCovan then ply:SetNWInt("blood_covan", BLOOD.GetCovan(ply)) end
     if BLOOD.SyncHungerNW then BLOOD.SyncHungerNW(ply) end
 
-    -- Point d'extension : les autres addons (ex. niveaux) appliquent leurs
-    -- bonus de PV / vitesse par-dessus la race. Appelé à chaque application.
+    -- Stats (PV / armure / vitesse) via le point d'assemblage
+    BLOOD.ApplyComputedStats(ply, true)
+
+    -- Compat : ancien point d'extension (après application).
     hook.Run("BLOOD_PostApplyStats", ply)
 end
 

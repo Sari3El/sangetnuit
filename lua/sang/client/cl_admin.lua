@@ -270,25 +270,39 @@ local function pageHeader(body, title, onBack)
 end
 
 ----------------------------------------------------------------------
--- Pages
+-- Pages (registre extensible : d'autres addons ajoutent des boutons)
 ----------------------------------------------------------------------
+BLOOD.Origines.pages = BLOOD.Origines.pages or {}
+
+--- Ajoute une page à la landing. t = { id, label, order, kind, build(f) }
+function BLOOD.Origines.AddPage(t)
+    for i, p in ipairs(BLOOD.Origines.pages) do
+        if p.id == t.id then BLOOD.Origines.pages[i] = t return end
+    end
+    table.insert(BLOOD.Origines.pages, t)
+end
+
 local buildLanding
 
-local function buildPlayerPage(f, races)
+-- Helper pour construire une sous-page standard (en-tête retour + scroll).
+function BLOOD.Origines.MakePage(f, title)
     f.Body:Clear()
-    pageHeader(f.Body, "Gestion Joueurs", function() buildLanding(f, races) end)
-    local scroll = makeScroll(f.Body)
-    local ctx = buildPlayerControls(scroll, races)
+    pageHeader(f.Body, title, function() buildLanding(f) end)
+    return makeScroll(f.Body)
+end
+BLOOD.Origines.MakeScroll = makeScroll
+
+local function buildPlayerPage(f)
+    local scroll = BLOOD.Origines.MakePage(f, "Gestion Joueurs")
+    local ctx = buildPlayerControls(scroll, f.Races)
     for _, fn in ipairs(BLOOD.Origines.playerSections) do
         local ok, err = pcall(fn, scroll, ctx)
         if not ok then MsgN("[Sang et Nuit] Origines player-section error: " .. tostring(err)) end
     end
 end
 
-local function buildServerPage(f, races)
-    f.Body:Clear()
-    pageHeader(f.Body, "Gestion Serveur", function() buildLanding(f, races) end)
-    local scroll = makeScroll(f.Body)
+local function buildServerPage(f)
+    local scroll = BLOOD.Origines.MakePage(f, "Gestion Serveur")
     if #BLOOD.Origines.serverSections == 0 then
         local l = vgui.Create("DLabel", scroll)
         l:Dock(TOP) l:DockMargin(0, S(8), 0, 0) l:SetFont("SangUI_Body") l:SetTextColor(C.txtDim)
@@ -300,37 +314,54 @@ local function buildServerPage(f, races)
     end
 end
 
-buildLanding = function(f, races)
+buildLanding = function(f)
     f.Body:Clear()
     local wrap = vgui.Create("DPanel", f.Body)
     wrap:Dock(FILL)
     wrap.Paint = function() end
 
-    local function bigButton(x, label, kind, onClick)
+    local pages = {}
+    for _, p in ipairs(BLOOD.Origines.pages) do pages[#pages + 1] = p end
+    table.sort(pages, function(a, b) return (a.order or 100) < (b.order or 100) end)
+
+    local btns = {}
+    for _, pg in ipairs(pages) do
         local b = vgui.Create("DButton", wrap)
-        b:SetText(label)
-        UI.SkinButton(b, kind)
+        b:SetText(pg.label)
+        UI.SkinButton(b, pg.kind or "gold")
         b:SetFont("SangUI_Title")
-        b.DoClick = onClick
-        b.Recompute = function()
-            local w, h = wrap:GetWide(), wrap:GetTall()
-            local bw, bh = S(260), S(150)
-            b:SetSize(bw, bh)
-            b:SetPos(w / 2 + x - bw / 2, h / 2 - bh / 2)
-        end
-        return b
+        b.DoClick = function() pg.build(f) end
+        btns[#btns + 1] = b
     end
 
-    local b1 = bigButton(-S(150), "Gestion Joueurs", "gold", function() buildPlayerPage(f, races) end)
-    local b2 = bigButton(S(150), "Gestion Serveur", "blood", function() buildServerPage(f, races) end)
-    wrap.PerformLayout = function()
-        b1.Recompute() b2.Recompute()
+    wrap.PerformLayout = function(self, w, h)
+        local perRow = 2
+        local bw, bh = S(240), S(140)
+        local gapx, gapy = S(30), S(24)
+        local n = #btns
+        local rows = math.max(1, math.ceil(n / perRow))
+        local totalH = rows * bh + (rows - 1) * gapy
+        local startY = (h - totalH) / 2
+        for i, b in ipairs(btns) do
+            local row = math.floor((i - 1) / perRow)
+            local col = (i - 1) % perRow
+            local inRow = math.min(perRow, n - row * perRow)
+            local totalW = inRow * bw + (inRow - 1) * gapx
+            local startX = (w - totalW) / 2
+            b:SetSize(bw, bh)
+            b:SetPos(startX + col * (bw + gapx), startY + row * (bh + gapy))
+        end
     end
 end
+
+-- Pages intégrées
+BLOOD.Origines.AddPage({ id = "joueurs", label = "Gestion Joueurs", order = 1, kind = "gold",  build = buildPlayerPage })
+BLOOD.Origines.AddPage({ id = "serveur", label = "Gestion Serveur", order = 2, kind = "blood", build = buildServerPage })
 
 function BLOOD.OpenAdminMenu(races)
     if IsValid(BLOOD.AdminFrame) then BLOOD.AdminFrame:Remove() end
     local f = UI.MakeFrame(S(760), S(720), "Sang et Nuit — Origines (Admin)")
     BLOOD.AdminFrame = f
-    buildLanding(f, races)
+    f.Races = races
+    buildLanding(f)
 end

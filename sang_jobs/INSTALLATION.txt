@@ -1,0 +1,40 @@
+==========================================================================
+  SANG ET NUIT — JOBS / F4 / SCOREBOARD (addon séparé)
+==========================================================================
+
+Addon INDÉPENDANT. DÉPEND de "sang_et_nuit" (thème, point d'assemblage des
+stats, menu Origines). Le niveau au scoreboard vient de "sang_niveau" (facultatif).
+
+--------------------------------------------------------------------------
+INSTALLATION
+--------------------------------------------------------------------------
+Copie "sang_jobs" dans addons/ , à côté des autres. Remplace AUSSI
+"sang_et_nuit" et "sang_niveau" par les versions fournies en même temps
+(le calcul des stats a été refactoré pour empiler job -> race -> niveau).
+
+--------------------------------------------------------------------------
+JOBS  (par personnage)
+--------------------------------------------------------------------------
+- F4 : menu de choix de job (4 jobs : Sans Faction, Humanité, Monstre, Guilde).
+- Chaque job pose la BASE PV / armure / vitesse. Puis :
+    PV      = PV_job × race × (1 + vitalité)
+    vitesse = base × race × job × (1 + agilité)
+    armure  = job (statique)
+- Choisir un job respawn le personnage et applique les stats.
+- Réglage des jobs dans lua/sang_jobs/sh_config.lua.
+
+--------------------------------------------------------------------------
+SCOREBOARD (TAB)
+--------------------------------------------------------------------------
+Remplace le scoreboard par défaut : joueurs groupés par faction, avec avatar,
+nom, job (couleur), niveau et ping.
+
+--------------------------------------------------------------------------
+ORIGINES -> CONFIG PERSO  (3e bouton)
+--------------------------------------------------------------------------
+- Forcer le job d'un slot d'un joueur.
+- Override PV / Armure / Vitesse d'un joueur sur un job : ces valeurs
+  REMPLACENT la base du job pour LUI (champ vide = valeur par défaut du job).
+  Ex : Monstre = 100 PV par défaut ; override 150 pour un joueur -> il a 150
+  quand il prend Monstre.
+==========================================================================
