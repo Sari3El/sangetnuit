@@ -206,6 +206,7 @@ end
 local ACTION_INFO = {
     depot         = { label = "Dépôt",           col = "hungerLt" },
     retrait       = { label = "Retrait",         col = "bloodLt"  },
+    depot_faction = { label = "Dépôt faction",   col = "hungerLt" },
     admin_joueur  = { label = "Admin · joueur",  col = "goldLt"   },
     admin_faction = { label = "Admin · faction", col = "goldLt"   },
     taxe          = { label = "Taxe",            col = "steelLt"  },

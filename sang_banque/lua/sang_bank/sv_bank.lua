@@ -119,6 +119,47 @@ SBANK.NetReceive("sang_bank_withdraw", 0.4, function(_, ply)
     SBANK.Sync(ply)
 end)
 
+----------------------------------------------------------------------
+-- Dépôt dans SA banque de faction (les membres Guilde/Monstre/Humanité
+-- peuvent voir le solde et DÉPOSER, mais jamais retirer).
+----------------------------------------------------------------------
+SBANK.NetReceive("sang_bank_facdeposit", 0.4, function(_, ply)
+    local amount = net.ReadUInt(32)
+    if amount <= 0 then return end
+    if not SBANK.IsNearBank(ply) then notify(ply, "Approche-toi d'une banque.", "error") return end
+    if not (BLOOD and BLOOD.GetCovan) then return end
+
+    -- Faction du joueur (posée par sang_jobs) ; doit être une vraie faction.
+    local fac = ply:GetNWString("sang_faction", "none")
+    if not C.FactionNames[fac] then
+        notify(ply, "Tu n'appartiens à aucune faction.", "error")
+        return
+    end
+
+    local wallet = BLOOD.GetCovan(ply)
+    if wallet < amount then
+        notify(ply, "Pas assez d'argent sur toi.", "error")
+        return
+    end
+
+    local tax = math.floor(amount * SBANK.GetTax("faction") / 100)
+    local net_ = amount - tax
+
+    BLOOD.AddCovan(ply, -amount)
+    SBANK.AddFaction(fac, net_)
+    if tax > 0 then SBANK.AddFaction(C.TaxBank, tax) end
+    local bal = SBANK.GetFaction(fac)
+
+    SBANK.LogHistory({
+        action = "depot_faction", actor = ply:SteamID64(), actor_name = ply:Nick(),
+        target = fac, slot = 0, amount = net_,
+        detail = (tax > 0 and ("taxe " .. tax) or ""),
+    })
+
+    notify(ply, "Déposé " .. net_ .. " dans la banque " .. C.FactionNames[fac] .. " (taxe " .. tax .. ").", "info")
+    SBANK.Sync(ply)
+end)
+
 SBANK.NetReceive("sang_bank_reqsync", 0.5, function(_, ply)
     SBANK.Sync(ply)
 end)

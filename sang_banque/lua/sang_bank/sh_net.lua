@@ -5,8 +5,9 @@
 if SERVER then
     util.AddNetworkString("sang_bank_open")     -- S->C : ouvre/rafraîchit le menu (données)
     util.AddNetworkString("sang_bank_reqsync")  -- C->S : demande une resynchro
-    util.AddNetworkString("sang_bank_deposit")  -- C->S : déposer
-    util.AddNetworkString("sang_bank_withdraw") -- C->S : retirer
+    util.AddNetworkString("sang_bank_deposit")  -- C->S : déposer (perso)
+    util.AddNetworkString("sang_bank_withdraw") -- C->S : retirer (perso)
+    util.AddNetworkString("sang_bank_facdeposit") -- C->S : déposer dans SA banque de faction
 
     -- Admin (re-vérifié serveur-side)
     util.AddNetworkString("sang_bank_settax")    -- C->S : régler une taxe

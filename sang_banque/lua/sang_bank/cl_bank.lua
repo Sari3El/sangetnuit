@@ -97,6 +97,47 @@ function SBANK.RefreshBankMenu()
         local a = math.floor(tonumber(witEntry:GetValue()) or 0)
         if a > 0 then net.Start("sang_bank_withdraw") net.WriteUInt(a, 32) net.SendToServer() end
     end
+
+    ------------------------------------------------------------------
+    -- Banque de FACTION (membres Guilde / Monstre / Humanité)
+    --   Voir le solde + déposer. PAS de retrait (réservé à l'admin).
+    ------------------------------------------------------------------
+    local fac = LocalPlayer():GetNWString("sang_faction", "none")
+    local facName = SBANK.Config and SBANK.Config.FactionNames and SBANK.Config.FactionNames[fac]
+    if facName then
+        local facBal = d[fac] or 0
+
+        local head2 = vgui.Create("DPanel", body)
+        head2:Dock(TOP) head2:DockMargin(0, S(12), 0, S(6)) head2:SetTall(S(52))
+        head2.Paint = function(_, w, h)
+            UI.VGradient(0, 0, w, h, UI.Shade(C.bg2, 6), C.bg1)
+            surface.SetDrawColor(C.goldDk); surface.DrawOutlinedRect(0, 0, w, h, 1)
+            surface.SetDrawColor(C.blood); surface.DrawRect(0, 0, S(3), h)
+            draw.SimpleText("Banque de faction — " .. facName, "SangUI_Small", S(12), S(8), C.txtDim, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+            draw.SimpleText(string.Comma(facBal) .. " " .. cur, "SangUI_Title", w - S(12), S(22), C.goldLt, TEXT_ALIGN_RIGHT, TEXT_ALIGN_TOP)
+        end
+
+        local facInfo = vgui.Create("DLabel", body)
+        facInfo:Dock(TOP) facInfo:DockMargin(0, 0, 0, S(6))
+        facInfo:SetFont("SangUI_Small") facInfo:SetTextColor(C.txtDim)
+        facInfo:SetText("Dépôt uniquement — taxe " .. d.taxF .. "%. Le retrait est réservé à l'administration.")
+
+        local facRow = vgui.Create("DPanel", body)
+        facRow:Dock(TOP) facRow:DockMargin(0, 0, 0, S(6)) facRow:SetTall(S(30))
+        facRow.Paint = function() end
+        local facEntry = vgui.Create("DTextEntry", facRow)
+        facEntry:Dock(FILL) facEntry:SetNumeric(true) facEntry:SetText("")
+        facEntry:SetPlaceholderText("Montant à déposer dans la faction…")
+        UI.SkinEntry(facEntry)
+        local facBtn = vgui.Create("DButton", facRow)
+        facBtn:Dock(RIGHT) facBtn:DockMargin(S(8), 0, 0, 0) facBtn:SetWide(S(200))
+        facBtn:SetText("Déposer (faction)")
+        UI.SkinButton(facBtn, "gold")
+        facBtn.DoClick = function()
+            local a = math.floor(tonumber(facEntry:GetValue()) or 0)
+            if a > 0 then net.Start("sang_bank_facdeposit") net.WriteUInt(a, 32) net.SendToServer() end
+        end
+    end
 end
 
 function SBANK.OpenBankMenu()
