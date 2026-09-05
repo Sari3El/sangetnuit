@@ -1,0 +1,46 @@
+==========================================================================
+  SANG ET NUIT — NOURRITURE (addon séparé)
+==========================================================================
+
+Addon INDÉPENDANT de "sang_et_nuit". Il se branche automatiquement sur la
+faim de l'addon principal (BLOOD.AddHunger) s'il est présent ; sinon il
+soigne quand même les PV.
+
+--------------------------------------------------------------------------
+INSTALLATION
+--------------------------------------------------------------------------
+Copie le dossier "sang_nourriture" dans :
+   ...\GarrysMod\garrysmod\addons\
+
+Chemin final attendu :
+   ...\addons\sang_nourriture\lua\autorun\sang_food_init.lua
+
+Tu peux garder les DEUX addons côte à côte :
+   ...\addons\sang_et_nuit\
+   ...\addons\sang_nourriture\
+
+--------------------------------------------------------------------------
+UTILISATION
+--------------------------------------------------------------------------
+- Faire apparaître de la nourriture :
+    * Menu Sandbox (touche Q) -> onglet "Entities" -> catégorie
+      "Sang et Nuit" -> "Nourriture (Sang et Nuit)".
+    * Ou en console (admin) : sang_food_spawn  (apparaît là où tu vises).
+
+- Manger :
+    * Vise bien la nourriture (modèle models/Gibs/HGIBS.mdl).
+    * MAINTIENS la touche E ~5 secondes : une barre de progression se
+      remplit sous le viseur.
+    * À la fin : la faim remonte ET tu récupères un peu de PV.
+    * 3 repas maximum par nourriture, ensuite elle disparaît.
+
+--------------------------------------------------------------------------
+RÉGLAGES  (lua/sang_food/sh_config.lua)
+--------------------------------------------------------------------------
+   Model     modèle utilisé (models/Gibs/HGIBS.mdl)
+   FeedTime  durée de maintien de E (5 s)
+   FeedDist  portée max du regard
+   Hunger    faim rendue par repas (40)
+   Heal      PV rendus par repas (15)
+   MaxUses   repas avant disparition (3)
+==========================================================================
