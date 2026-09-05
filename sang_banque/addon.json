@@ -1,0 +1,11 @@
+{
+    "title": "Sang et Nuit — Banque",
+    "type": "servercontent",
+    "tags": ["roleplay", "build"],
+    "ignore": [
+        "*.md",
+        "*.txt",
+        ".git/*",
+        ".gitignore"
+    ]
+}

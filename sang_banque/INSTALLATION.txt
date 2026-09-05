@@ -1,0 +1,55 @@
+==========================================================================
+  SANG ET NUIT — BANQUE (addon séparé)
+==========================================================================
+
+Addon INDÉPENDANT. Il DÉPEND de "sang_et_nuit" (il utilise l'argent Covan et
+le thème des menus). Installe les deux côte à côte dans addons/.
+
+--------------------------------------------------------------------------
+INSTALLATION
+--------------------------------------------------------------------------
+Copie le dossier "sang_banque" dans :
+   ...\GarrysMod\garrysmod\addons\
+
+Côte à côte avec les autres :
+   ...\addons\sang_et_nuit\
+   ...\addons\sang_nourriture\
+   ...\addons\sang_banque\
+
+--------------------------------------------------------------------------
+UTILISATION
+--------------------------------------------------------------------------
+- Faire apparaître une banque :
+    Menu Sandbox (Q) -> Entities -> "Sang et Nuit" -> "Banque (Sang et Nuit)".
+    (Modèle : filecabinet001a. Elle reste figée là où tu la poses.)
+
+- Banque perso (par personnage) :
+    Vise la banque et fais [E] -> menu Déposer / Retirer.
+    C'est TA banque, propre au personnage joué. Une taxe (réglable) est
+    prélevée au dépôt ET au retrait, et versée à la Guilde.
+    Ex : taxe 10 %, tu déposes 100 -> 90 en banque, 10 pour la Guilde.
+
+- Bouton "Administration" (haut-droite du menu banque) :
+    Visible seulement pour les admins (whitelist de sang_et_nuit).
+    Permet de : régler les taxes (perso / faction), ajouter/retirer sur les
+    banques de faction (Monstre / Humain / Guilde) et sur la banque d'un
+    joueur (SteamID + slot).
+
+- Argent au sol (modèle clock01) :
+    * À la MORT : tu lâches 2/3 de l'argent que tu portes.
+    * /dropmoney <montant> : tu lâches un montant choisi.
+    * Ramassage : vise le tas et fais [E].
+
+--------------------------------------------------------------------------
+NOTE FACTIONS
+--------------------------------------------------------------------------
+Les 3 banques de faction existent et reçoivent les taxes (Guilde). Le dépôt/
+retrait par les JOUEURS de faction viendra avec le F4 et les jobs. Pour
+l'instant elles se gèrent via le bouton Administration.
+
+--------------------------------------------------------------------------
+RÉGLAGES  (lua/sang_bank/sh_config.lua)
+--------------------------------------------------------------------------
+   BankModel / GoldModel, OpenDist, PickupDist,
+   DeathDropNum/DeathDropDen (2/3), DefaultTaxPersonal, DefaultTaxFaction.
+==========================================================================
