@@ -30,6 +30,19 @@ function SBANK.SQL.Init()
         value TEXT
     );]])
 
+    -- Historique des actions de banque (persistant, on ne garde que les 100 dernières)
+    sql.Query([[CREATE TABLE IF NOT EXISTS sbank_history (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        ts          INTEGER NOT NULL DEFAULT 0,
+        action      TEXT    NOT NULL DEFAULT '',
+        actor       TEXT    NOT NULL DEFAULT '',
+        actor_name  TEXT    NOT NULL DEFAULT '',
+        target      TEXT    NOT NULL DEFAULT '',
+        slot        INTEGER NOT NULL DEFAULT 0,
+        amount      INTEGER NOT NULL DEFAULT 0,
+        detail      TEXT    NOT NULL DEFAULT ''
+    );]])
+
     -- Lignes de faction
     for _, fac in ipairs(C.Factions) do
         if not sql.QueryValue("SELECT 1 FROM sbank_faction WHERE faction = " .. E(fac) .. ";") then
@@ -99,6 +112,53 @@ function SBANK.SetTax(kind, value)
     SBANK.SQL.EnsureSetting("tax_" .. kind, value)
     sql.Query("UPDATE sbank_settings SET value = " .. E(value) .. " WHERE skey = " .. E("tax_" .. kind) .. ";")
     return value
+end
+
+----------------------------------------------------------------------
+-- Historique (les 100 dernières actions de banque, persistant au restart)
+----------------------------------------------------------------------
+SBANK.HistoryMax = SBANK.HistoryMax or 100
+
+-- Ajoute une entrée et élague la table pour ne garder que les N dernières.
+function SBANK.SQL.AddHistory(e)
+    e = e or {}
+    sql.Query("INSERT INTO sbank_history (ts, action, actor, actor_name, target, slot, amount, detail) VALUES ("
+        .. N(e.ts or os.time()) .. ", "
+        .. E(e.action or "") .. ", "
+        .. E(e.actor or "") .. ", "
+        .. E(e.actor_name or "") .. ", "
+        .. E(e.target or "") .. ", "
+        .. N(e.slot or 0) .. ", "
+        .. math.floor(tonumber(e.amount) or 0) .. ", "
+        .. E(e.detail or "") .. ");")
+
+    -- Élagage : supprime tout ce qui dépasse les N id les plus récents.
+    sql.Query("DELETE FROM sbank_history WHERE id NOT IN "
+        .. "(SELECT id FROM sbank_history ORDER BY id DESC LIMIT " .. N(SBANK.HistoryMax) .. ");")
+end
+
+-- Renvoie une liste { {ts,action,actor,actor_name,target,slot,amount,detail}, ... }
+-- de la plus récente à la plus ancienne.
+function SBANK.SQL.GetHistory(limit)
+    limit = math.Clamp(N(limit or SBANK.HistoryMax), 1, SBANK.HistoryMax)
+    local rows = sql.Query("SELECT ts, action, actor, actor_name, target, slot, amount, detail "
+        .. "FROM sbank_history ORDER BY id DESC LIMIT " .. limit .. ";")
+    local out = {}
+    if istable(rows) then
+        for _, r in ipairs(rows) do
+            out[#out + 1] = {
+                ts         = tonumber(r.ts) or 0,
+                action     = r.action or "",
+                actor      = r.actor or "",
+                actor_name = r.actor_name or "",
+                target     = r.target or "",
+                slot       = tonumber(r.slot) or 0,
+                amount     = tonumber(r.amount) or 0,
+                detail     = r.detail or "",
+            }
+        end
+    end
+    return out
 end
 
 SBANK.SQL.Init()

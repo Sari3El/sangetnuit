@@ -1,12 +1,16 @@
 --[[-------------------------------------------------------------------------
     Sang et Nuit — Banque : panneau admin (client)
-      Réglage des taxes, gestion des banques de faction et des banques
-      joueurs. Confort visuel — la vraie barrière est serveur-side.
+      Deux onglets :
+        • Gestion    : taxes, banques de faction, banque d'un joueur.
+        • Historique : les 100 dernières actions de banque (persistant).
+      Confort visuel — la vraie barrière est serveur-side.
 ---------------------------------------------------------------------------]]
 
 SBANK = SBANK or {}
 SBANK.AdminSel = SBANK.AdminSel or { sid = "", slot = 1 }
 SBANK.PlayerBank = SBANK.PlayerBank or { sid = nil, slot = nil, amount = nil }
+SBANK.AdminTab = SBANK.AdminTab or "gestion"
+SBANK.History = SBANK.History or nil -- liste reçue du serveur (ou nil = pas encore)
 
 local function pbankText()
     local sel, pb = SBANK.AdminSel, SBANK.PlayerBank
@@ -46,24 +50,29 @@ local function section(parent, text)
     return l
 end
 
-function SBANK.RefreshAdminPanel()
-    local f = SBANK.AdminFrame
-    if not IsValid(f) or not IsValid(f.Body) then return end
+-- Barre de défilement stylée (dorée sombre) pour un DScrollPanel.
+local function skinScroll(scroll)
     local UI, C = BLOOD.UI, BLOOD.UI.Col
     local S = UI.Scale
-    local d = SBANK.Data
-
-    local body = f.Body
-    body:Clear()
-
-    local scroll = vgui.Create("DScrollPanel", body)
-    scroll:Dock(FILL)
     local sbar = scroll:GetVBar()
     sbar:SetWide(S(8))
     sbar.Paint = function() end
     sbar.btnUp.Paint = function() end
     sbar.btnDown.Paint = function() end
     sbar.btnGrip.Paint = function(_, w, h) surface.SetDrawColor(C.goldDk); surface.DrawRect(0, 0, w, h) end
+end
+
+----------------------------------------------------------------------
+-- Onglet « Gestion »
+----------------------------------------------------------------------
+function SBANK.BuildManageTab(parent)
+    local UI, C = BLOOD.UI, BLOOD.UI.Col
+    local S = UI.Scale
+    local d = SBANK.Data
+
+    local scroll = vgui.Create("DScrollPanel", parent)
+    scroll:Dock(FILL)
+    skinScroll(scroll)
     local p = scroll
 
     -- 1) Taxes
@@ -191,11 +200,206 @@ function SBANK.RefreshAdminPanel()
     queryPlayerBank() -- rafraîchit le solde affiché
 end
 
+----------------------------------------------------------------------
+-- Onglet « Historique »
+----------------------------------------------------------------------
+local ACTION_INFO = {
+    depot         = { label = "Dépôt",           col = "hungerLt" },
+    retrait       = { label = "Retrait",         col = "bloodLt"  },
+    admin_joueur  = { label = "Admin · joueur",  col = "goldLt"   },
+    admin_faction = { label = "Admin · faction", col = "goldLt"   },
+    taxe          = { label = "Taxe",            col = "steelLt"  },
+}
+
+-- Nom lisible d'une cible (steamid64 ou faction).
+local FACTION_LABEL = { monstre = "Monstre", humain = "Humain", guilde = "Guilde" }
+local function targetText(h)
+    if h.target == "" then return "" end
+    if FACTION_LABEL[h.target] then return "Faction " .. FACTION_LABEL[h.target] end
+    -- steamid64 : cible joueur (+ slot le cas échéant)
+    local s = h.target
+    if h.slot and h.slot > 0 then s = s .. " · slot " .. h.slot end
+    return s
+end
+
+-- (Re)dessine la liste d'historique dans le conteneur mémorisé.
+function SBANK.RenderHistory()
+    local list = SBANK._histList
+    if not IsValid(list) then return end
+    local UI, C = BLOOD.UI, BLOOD.UI.Col
+    local S = UI.Scale
+    list:Clear()
+
+    local hist = SBANK.History
+    if hist == nil then
+        local lbl = vgui.Create("DLabel", list)
+        lbl:Dock(TOP) lbl:DockMargin(0, S(10), 0, 0) lbl:SetFont("SangUI_Small") lbl:SetTextColor(C.txtDim)
+        lbl:SetText("Chargement de l'historique…")
+        return
+    end
+    if #hist == 0 then
+        local lbl = vgui.Create("DLabel", list)
+        lbl:Dock(TOP) lbl:DockMargin(0, S(10), 0, 0) lbl:SetFont("SangUI_Small") lbl:SetTextColor(C.txtDim)
+        lbl:SetText("Aucune action enregistrée pour le moment.")
+        return
+    end
+
+    local cur = (BLOOD.Config and BLOOD.Config.Currency) or "Covan"
+    for _, h in ipairs(hist) do
+        local info = ACTION_INFO[h.action] or { label = h.action, col = "txt" }
+        local acol = C[info.col] or C.txt
+        local when = h.ts > 0 and os.date("%d/%m %H:%M", h.ts) or "—"
+        local amtTxt = (h.amount >= 0 and "+" or "") .. string.Comma(h.amount) .. " " .. cur
+        local amtCol = h.amount > 0 and C.hungerLt or (h.amount < 0 and C.bloodLt or C.txtDim)
+        local tgt = targetText(h)
+        local detail = h.detail or ""
+
+        local row = vgui.Create("DPanel", list)
+        row:Dock(TOP) row:DockMargin(0, 0, S(6), S(3)) row:SetTall(S(40))
+        row.Paint = function(_, w, hh)
+            UI.VGradient(0, 0, w, hh, UI.Shade(C.bg1, 4), C.bg0)
+            surface.SetDrawColor(C.goldDk); surface.DrawOutlinedRect(0, 0, w, hh, 1)
+            -- liseré coloré à gauche selon l'action
+            surface.SetDrawColor(acol.r, acol.g, acol.b, 220); surface.DrawRect(0, 0, S(3), hh)
+
+            -- ligne du haut : date · action · acteur
+            draw.SimpleText(when, "SangUI_Tiny", S(10), S(7), C.txtDim, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+            draw.SimpleText(info.label, "SangUI_Small", S(78), S(7), acol, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+            if h.actor_name ~= "" then
+                draw.SimpleText("par " .. h.actor_name, "SangUI_Tiny", S(210), S(7), C.txt, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+            end
+            -- montant à droite
+            draw.SimpleText(amtTxt, "SangUI_Bar", w - S(10), S(7), amtCol, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+
+            -- ligne du bas : cible + détail
+            local sub = tgt
+            if detail ~= "" then sub = (sub ~= "" and (sub .. "   —   ") or "") .. detail end
+            if sub ~= "" then
+                draw.SimpleText(sub, "SangUI_Tiny", S(10), hh - S(12), C.txtDim, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+            end
+        end
+    end
+end
+
+function SBANK.RequestHistory()
+    SBANK.History = nil
+    net.Start("sang_bank_hist_req")
+    net.SendToServer()
+end
+
+net.Receive("sang_bank_hist_data", function()
+    local n = net.ReadUInt(8)
+    local out = {}
+    for _ = 1, n do
+        out[#out + 1] = {
+            ts         = net.ReadUInt(32),
+            action     = net.ReadString(),
+            actor_name = net.ReadString(),
+            target     = net.ReadString(),
+            slot       = net.ReadUInt(8),
+            amount     = net.ReadInt(32),
+            detail     = net.ReadString(),
+        }
+    end
+    SBANK.History = out
+    if SBANK.AdminTab == "historique" then SBANK.RenderHistory() end
+end)
+
+function SBANK.BuildHistoryTab(parent)
+    local UI, C = BLOOD.UI, BLOOD.UI.Col
+    local S = UI.Scale
+
+    -- Bandeau : intitulé + bouton rafraîchir
+    local top = vgui.Create("DPanel", parent)
+    top:Dock(TOP) top:DockMargin(0, 0, S(6), S(6)) top:SetTall(S(28))
+    top.Paint = function(_, w, h)
+        draw.SimpleText("100 dernières actions de banque (conservées au redémarrage)",
+            "SangUI_Small", 0, h / 2, C.txtDim, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+    end
+    local ref = vgui.Create("DButton", top)
+    ref:Dock(RIGHT) ref:SetWide(S(130)) ref:SetText("Rafraîchir")
+    UI.SkinButton(ref, "gold")
+    ref.DoClick = function() SBANK.RequestHistory() SBANK.RenderHistory() end
+
+    local scroll = vgui.Create("DScrollPanel", parent)
+    scroll:Dock(FILL)
+    skinScroll(scroll)
+    SBANK._histList = scroll
+
+    SBANK.RenderHistory()      -- affiche l'état courant (ou « chargement »)
+    SBANK.RequestHistory()     -- demande la version fraîche au serveur
+end
+
+----------------------------------------------------------------------
+-- Onglets + châssis
+----------------------------------------------------------------------
+function SBANK.ShowAdminTab(id)
+    SBANK.AdminTab = id
+    local content = SBANK.AdminContent
+    if not IsValid(content) then return end
+    content:Clear()
+    if IsValid(SBANK._tabBar) then SBANK._tabBar:InvalidateLayout() end
+    if id == "historique" then
+        SBANK.BuildHistoryTab(content)
+    else
+        SBANK.BuildManageTab(content)
+    end
+end
+
+-- Rebuild appelé quand de nouvelles données arrivent (sang_bank_open).
+function SBANK.RefreshAdminPanel()
+    local f = SBANK.AdminFrame
+    if not IsValid(f) or not IsValid(SBANK.AdminContent) then return end
+    if SBANK.AdminTab == "gestion" then
+        SBANK.AdminContent:Clear()
+        SBANK.BuildManageTab(SBANK.AdminContent)
+    end
+end
+
+local function tabButton(bar, id, label)
+    local UI, C = BLOOD.UI, BLOOD.UI.Col
+    local S = UI.Scale
+    local b = vgui.Create("DButton", bar)
+    b:Dock(LEFT) b:DockMargin(0, 0, S(6), 0) b:SetWide(S(160)) b:SetText("")
+    b.Paint = function(self, w, h)
+        local active = (SBANK.AdminTab == id)
+        local hovered = self:IsHovered()
+        local base = active and Color(64, 51, 28, 250) or C.bg1
+        UI.VGradient(0, 0, w, h, UI.Shade(base, hovered and 16 or 6), UI.Shade(base, -14))
+        surface.SetDrawColor(active and C.gold or C.goldDk)
+        surface.DrawOutlinedRect(0, 0, w, h, 1)
+        if active then
+            surface.SetDrawColor(C.gold); surface.DrawRect(0, h - S(2), w, S(2))
+        end
+        draw.SimpleText(label, "SangUI_Body", w / 2, h / 2,
+            active and C.goldLt or C.txtDim, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    end
+    b.DoClick = function() SBANK.ShowAdminTab(id) end
+    return b
+end
+
 function SBANK.OpenAdminPanel()
     if not (BLOOD and BLOOD.UI) then return end
     local UI = BLOOD.UI
     local S = UI.Scale
     if IsValid(SBANK.AdminFrame) then SBANK.AdminFrame:Remove() end
     SBANK.AdminFrame = UI.MakeFrame(S(740), S(720), "Banque — Administration")
-    SBANK.RefreshAdminPanel()
+
+    local body = SBANK.AdminFrame.Body
+
+    -- Barre d'onglets
+    local bar = vgui.Create("DPanel", body)
+    bar:Dock(TOP) bar:DockMargin(0, 0, 0, S(8)) bar:SetTall(S(34))
+    bar.Paint = function() end
+    SBANK._tabBar = bar
+    tabButton(bar, "gestion", "Gestion")
+    tabButton(bar, "historique", "Historique")
+
+    -- Conteneur d'onglet
+    local content = vgui.Create("DPanel", body)
+    content:Dock(FILL)
+    content.Paint = function() end
+    SBANK.AdminContent = content
+
+    SBANK.ShowAdminTab(SBANK.AdminTab or "gestion")
 end

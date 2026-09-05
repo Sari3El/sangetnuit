@@ -1,0 +1,64 @@
+==========================================================================
+  SANG ET NUIT — BACKUP / SAUVEGARDE SQL (addon séparé)
+==========================================================================
+
+Addon INDÉPENDANT. Il sauvegarde automatiquement toutes les données « Sang »
+(personnages, races, Covan, faim, niveaux, jobs, banque, historique, rareté)
+en faisant un DUMP JSON des tables de la base SQLite (garrysmod/sv.db).
+
+Pourquoi un dump JSON et pas une copie de sv.db ?
+  Le module de fichiers de GMod est « sandboxé » sur garrysmod/data/ : il ne
+  peut pas lire/copier sv.db directement. On exporte donc les tables en JSON,
+  ce qui est en plus lisible et facile à restaurer.
+
+--------------------------------------------------------------------------
+INSTALLATION
+--------------------------------------------------------------------------
+Copie le dossier "sang_backup" dans :
+    garrysmod/addons/
+
+À côté de "sang_et_nuit", "sang_niveau", "sang_jobs", "sang_banque",
+"sang_nourriture". Aucune dépendance : il découvre tout seul les tables Sang
+présentes (préfixes blood_ / slvl_ / sjob_ / sbank_ / sfood_).
+
+--------------------------------------------------------------------------
+FONCTIONNEMENT
+--------------------------------------------------------------------------
+- Sauvegarde AUTOMATIQUE toutes les 15 minutes.
+- Sauvegarde à l'EXTINCTION du serveur.
+- Les fichiers sont écrits dans :
+    garrysmod/data/sang/backups/backup_AAAA-MM-JJ_HH-MM-SS.json
+- On garde les 20 sauvegardes les plus récentes (les plus vieilles sont
+  supprimées automatiquement).
+- Réglages dans : lua/sang_backup/sh_config.lua
+    Interval      = fréquence (secondes)
+    KeepBackups   = nombre de backups conservés
+
+--------------------------------------------------------------------------
+COMMANDES CONSOLE
+--------------------------------------------------------------------------
+Dans la console serveur (ou en superadmin) :
+
+  sang_backup_now
+      -> fait une sauvegarde tout de suite.
+
+  sang_backup_list
+      -> liste les sauvegardes disponibles.
+
+  sang_backup_restore <fichier.json>
+      -> RESTAURE une sauvegarde (écrase les tables Sang actuelles).
+         Réservé à la CONSOLE SERVEUR / SUPERADMIN.
+         Après une restauration : change de map ou reconnecte-toi pour que
+         tout soit rechargé proprement.
+      Exemple :
+         sang_backup_restore backup_2025-01-31_14-30-00.json
+
+--------------------------------------------------------------------------
+NOTE
+--------------------------------------------------------------------------
+Les données sont déjà écrites en base à chaque changement (Covan, faim,
+niveaux, jobs, banque...). Ce backup sert de FILET DE SÉCURITÉ : en cas de
+corruption de sv.db, tu réinstalles GMod/l'addon puis tu restaures le dernier
+JSON. Pense à sauvegarder de temps en temps le dossier data/sang/backups/
+en dehors du serveur.
+==========================================================================

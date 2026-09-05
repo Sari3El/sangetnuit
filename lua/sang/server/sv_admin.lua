@@ -56,7 +56,7 @@ end)
 ----------------------------------------------------------------------
 -- Action : donner des crédits (fonctionne hors-ligne)
 ----------------------------------------------------------------------
-net.Receive("origines_give_credits", function(_, ply)
+BLOOD.NetReceive("origines_give_credits", 0.3, function(_, ply)
     if not BLOOD.IsAdmin(ply) then
         logAdmin("REFUS give_credits de " .. ply:Nick() .. " (" .. ply:SteamID64() .. ") — non autorisé")
         return
@@ -82,7 +82,7 @@ end)
 -- Action : définir une race sur un slot (contourne tirage + paiement)
 --   Fonctionne aussi hors-ligne (écriture SQL directe).
 ----------------------------------------------------------------------
-net.Receive("origines_set_race", function(_, ply)
+BLOOD.NetReceive("origines_set_race", 0.3, function(_, ply)
     if not BLOOD.IsAdmin(ply) then
         logAdmin("REFUS set_race de " .. ply:Nick() .. " (" .. ply:SteamID64() .. ") — non autorisé")
         return
@@ -126,7 +126,7 @@ end)
 ----------------------------------------------------------------------
 -- Action : renommer un slot (marche hors-ligne ; slot existant uniquement)
 ----------------------------------------------------------------------
-net.Receive("origines_rename_slot", function(_, ply)
+BLOOD.NetReceive("origines_rename_slot", 0.3, function(_, ply)
     if not BLOOD.IsAdmin(ply) then
         logAdmin("REFUS rename_slot de " .. ply:Nick() .. " (" .. ply:SteamID64() .. ") — non autorisé")
         return
@@ -165,7 +165,7 @@ end)
 ----------------------------------------------------------------------
 -- Action : débloquer / verrouiller le slot payant (marche hors-ligne)
 ----------------------------------------------------------------------
-net.Receive("origines_set_paid", function(_, ply)
+BLOOD.NetReceive("origines_set_paid", 0.3, function(_, ply)
     if not BLOOD.IsAdmin(ply) then
         logAdmin("REFUS set_paid de " .. ply:Nick() .. " (" .. ply:SteamID64() .. ") — non autorisé")
         return
@@ -190,7 +190,7 @@ end)
 ----------------------------------------------------------------------
 -- Requête : infos d'un slot (nom / race / covan) pour l'affichage admin
 ----------------------------------------------------------------------
-net.Receive("origines_query_slot", function(_, ply)
+BLOOD.NetReceive("origines_query_slot", 0.15, function(_, ply)
     if not BLOOD.IsAdmin(ply) then return end
     local rawSid = net.ReadString()
     local slot = net.ReadUInt(8)
@@ -215,7 +215,52 @@ net.Receive("origines_query_slot", function(_, ply)
     net.Send(ply)
 end)
 
-net.Receive("origines_set_covan", function(_, ply)
+----------------------------------------------------------------------
+-- Rareté des sangs : envoi de la table + modification (poids + palier)
+----------------------------------------------------------------------
+local function sendRarity(ply)
+    net.Start("origines_rarity_data")
+        net.WriteUInt(#BLOOD.Config.Races, 8)
+        for _, r in ipairs(BLOOD.Config.Races) do
+            net.WriteString(r.id)
+            net.WriteString(r.name or r.id)
+            net.WriteUInt(math.Clamp(math.floor(r.weight or 0), 0, 100000), 32)
+            net.WriteFloat(BLOOD.RarityChance(r.id))
+            net.WriteString((BLOOD.Config.RaceTiers and BLOOD.Config.RaceTiers[r.id]) or "commun")
+        end
+    net.Send(ply)
+end
+
+BLOOD.NetReceive("origines_req_rarity", 0.15, function(_, ply)
+    if not BLOOD.IsAdmin(ply) then return end
+    sendRarity(ply)
+end)
+
+BLOOD.NetReceive("origines_set_rarity", 0.3, function(_, ply)
+    if not BLOOD.IsAdmin(ply) then
+        logAdmin("REFUS set_rarity de " .. ply:Nick() .. " (" .. ply:SteamID64() .. ") — non autorisé")
+        return
+    end
+    local raceId = net.ReadString()
+    local weight = net.ReadUInt(32)
+    local tier   = net.ReadString()
+
+    if not BLOOD.RaceExists(raceId) then
+        BLOOD.Notify(ply, "Sang invalide.", "error")
+        return
+    end
+    if not BLOOD.SetRarity(raceId, weight, tier) then
+        BLOOD.Notify(ply, "Échec de la modification.", "error")
+        return
+    end
+
+    logAdmin(ply:Nick() .. " (" .. ply:SteamID64() .. ") a réglé la rareté de '" .. raceId
+        .. "' (poids=" .. weight .. ", palier=" .. tier .. ")")
+    BLOOD.Notify(ply, "Rareté mise à jour : " .. raceId .. ".", "info")
+    sendRarity(ply) -- renvoie la table à jour (chances recalculées)
+end)
+
+BLOOD.NetReceive("origines_set_covan", 0.3, function(_, ply)
     if not BLOOD.IsAdmin(ply) then
         logAdmin("REFUS set_covan de " .. ply:Nick() .. " (" .. ply:SteamID64() .. ") — non autorisé")
         return

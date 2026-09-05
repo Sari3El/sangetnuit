@@ -30,15 +30,22 @@ end
 
 ----------------------------------------------------------------------
 -- Roulette
+--   Affichage CENTRÉ à l'écran (fenêtre symétrique de cartes autour du
+--   marqueur). Le menu perso reste ouvert DERRIÈRE ; l'overlay capte les
+--   clics pour empêcher de relancer un spin. La lignée n'est appliquée
+--   côté serveur qu'à la fin de l'animation.
 ----------------------------------------------------------------------
 function BLOOD.PlayRerollRoulette(resultId)
     if not (BLOOD.UI and BLOOD.Races) then return end
-    if IsValid(BLOOD.MenuFrame) then BLOOD.MenuFrame:Remove() end
     if IsValid(BLOOD.RoulettePanel) then BLOOD.RoulettePanel:Remove() end
 
+    BLOOD.Rerolling = true
+    -- Reflète l'état dans le menu (bouton reroll grisé) sans le fermer.
+    if IsValid(BLOOD.MenuFrame) and BLOOD.RefreshMenu then BLOOD.RefreshMenu() end
+
     local order = BLOOD.RaceOrder or { "human" }
-    local N = 50
-    local resultIdx0 = N - 6
+    local N = 60
+    local resultIdx0 = N - 10            -- laisse assez de cartes des deux côtés
     local cards = {}
     for i = 1, N do cards[i] = order[math.random(#order)] or "human" end
     cards[resultIdx0 + 1] = resultId
@@ -47,11 +54,13 @@ function BLOOD.PlayRerollRoulette(resultId)
     BLOOD.RoulettePanel = p
     p:SetSize(ScrW(), ScrH())
     p:SetPos(0, 0)
-    p:SetMouseInputEnabled(false)
-    p:SetKeyboardInputEnabled(false)
+    p:MakePopup()                        -- passe au-dessus du menu (popup postérieur)
+    p:SetKeyboardInputEnabled(false)     -- pas de capture clavier
+    p:SetMouseInputEnabled(true)         -- capte les clics -> bloque le menu derrière
+    p.OnMousePressed = function() end    -- avale les clics
 
     p.Start = SysTime()
-    p.Dur = 4.2
+    p.Dur = BLOOD.Config and BLOOD.Config.RerollAnimTime or 4.2
     p.Hold = 2.6
     p.Cards = cards
     p.ResultIdx0 = resultIdx0
@@ -61,13 +70,14 @@ function BLOOD.PlayRerollRoulette(resultId)
 
     p.Paint = function(self, w, h)
         local C = BLOOD.UI.Col
+        -- Toujours recentrer sur l'écran réel (robuste aux changements de résolution).
+        w, h = ScrW(), ScrH()
         local cw, ch, gap = S(150), S(190), S(12)
         local pit = cw + gap
         local cx = w / 2
         local rowY = h / 2 - ch / 2
 
         local t = (SysTime() - self.Start) / self.Dur
-        local offset = (self.ResultIdx0 * pit) * easeOut(t)
 
         surface.SetDrawColor(6, 5, 4, math.Clamp(t * 3, 0, 1) * 232)
         surface.DrawRect(0, 0, w, h)
@@ -75,11 +85,17 @@ function BLOOD.PlayRerollRoulette(resultId)
         draw.SimpleText("Réveil du Sang…", "SangRoul_Title", cx + 1, rowY - S(40) + 1, Color(0, 0, 0, 200), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
         draw.SimpleText("Réveil du Sang…", "SangRoul_Title", cx, rowY - S(40), C.goldLt, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
-        local stripStartX = cx - cw / 2
-        local firstI = math.max(0, math.floor((offset - cw) / pit))
-        local lastI  = math.min(#self.Cards - 1, firstI + math.ceil(w / pit) + 2)
-        for i = firstI, lastI do
-            drawCard(stripStartX + i * pit - offset, rowY, cw, ch, self.Cards[i + 1], false)
+        -- Index central (fractionnaire) de 0 -> resultIdx0 pendant l'anim.
+        local centerF = self.ResultIdx0 * easeOut(t)
+        local base = math.floor(centerF)
+        local frac = centerF - base
+        local half = math.ceil(w / pit / 2) + 2
+        for k = -half, half do
+            local i = base + k
+            if i >= 0 and i < #self.Cards then
+                local x = cx - cw / 2 + (k - frac) * pit
+                drawCard(x, rowY, cw, ch, self.Cards[i + 1], (t >= 1 and i == self.ResultIdx0))
+            end
         end
 
         -- marqueur central
@@ -102,8 +118,7 @@ function BLOOD.PlayRerollRoulette(resultId)
     p.Think = function(self)
         local t = (SysTime() - self.Start) / self.Dur
         if t < 1 then
-            local pit = S(150) + S(12)
-            local center = math.Round(((self.ResultIdx0 * pit) * easeOut(t)) / pit)
+            local center = math.Round(self.ResultIdx0 * easeOut(t))
             if center ~= self.LastCenter then
                 self.LastCenter = center
                 surface.PlaySound("common/wpn_moveselect.wav")
@@ -115,6 +130,12 @@ function BLOOD.PlayRerollRoulette(resultId)
         if (SysTime() - self.Start) >= (self.Dur + self.Hold) then
             self:Remove()
         end
+    end
+
+    p.OnRemove = function()
+        BLOOD.Rerolling = false
+        -- Rafraîchit le menu (la nouvelle lignée est déjà synchronisée).
+        if IsValid(BLOOD.MenuFrame) and BLOOD.RefreshMenu then BLOOD.RefreshMenu() end
     end
 end
 

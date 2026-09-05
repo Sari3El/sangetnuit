@@ -34,3 +34,43 @@ function BLOOD.GetPlayerBySteamID64(sid64)
     end
     return nil
 end
+
+if SERVER then
+    -- Anti-abus réseau générique. Partagé entre TOUS les addons Sang :
+    --   - valide l'expéditeur (joueur valide) ;
+    --   - fenêtre anti-spam GLOBALE par joueur (stockée sur l'entité, donc
+    --     commune à tous les addons) ;
+    --   - cooldown par message.
+    -- Utilisation : BLOOD.NetReceive("nom", cooldown, function(len, ply) ... end)
+    BLOOD.NetMaxPerSecond = BLOOD.NetMaxPerSecond or 40
+
+    function BLOOD.NetReceive(name, cooldown, fn)
+        net.Receive(name, function(len, ply)
+            if not IsValid(ply) or not ply:IsPlayer() then return end
+            local now = CurTime()
+
+            -- fenêtre anti-spam globale (1 s)
+            local win = ply.SangNetWin
+            if not win or now - win.t >= 1 then win = { t = now, n = 0 } ply.SangNetWin = win end
+            win.n = win.n + 1
+            if win.n > BLOOD.NetMaxPerSecond then
+                if not ply.SangNetSpamLog or now - ply.SangNetSpamLog > 5 then
+                    ply.SangNetSpamLog = now
+                    MsgN("[Sang][ANTISPAM] " .. ply:Nick() .. " (" .. ply:SteamID64()
+                        .. ") débit réseau excessif — messages temporairement ignorés")
+                end
+                return
+            end
+
+            -- cooldown par message
+            if cooldown and cooldown > 0 then
+                ply.SangNetCD = ply.SangNetCD or {}
+                local nxt = ply.SangNetCD[name]
+                if nxt and now < nxt then return end
+                ply.SangNetCD[name] = now + cooldown
+            end
+
+            fn(len, ply)
+        end)
+    end
+end

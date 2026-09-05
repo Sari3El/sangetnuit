@@ -34,7 +34,8 @@ C.FreeSlots = 3   -- slots 1..3 gratuits ; slot 4 = payant (voir déblocage)
 
 -- Reroll
 C.RerollCost     = 1     -- 1 crédit = 1 reroll (coût fixe)
-C.RerollCooldown = 1.5   -- anti-spam serveur (secondes) sur les boutons reroll/humain
+C.RerollCooldown = 1.5   -- anti-spam serveur (secondes) sur le bouton reroll
+C.RerollAnimTime = 4.2   -- durée (s) de la roulette : la lignée n'est appliquée qu'À LA FIN
 C.RerollAnnounceDelay = 4.6 -- délai (s) avant l'annonce publique (après la roulette)
 
 -- Régénération (races à regen)

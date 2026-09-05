@@ -23,7 +23,7 @@ local function log(ply, line)
     MsgN("[Sang Niveau][ADMIN] " .. ply:Nick() .. " " .. line)
 end
 
-net.Receive("slvl_admin_setlevel", function(_, ply)
+SLVL.NetReceive("slvl_admin_setlevel", 0.3, function(_, ply)
     if not isAdmin(ply) then return end
     local sid, slot = readTarget()
     local level = net.ReadUInt(16)
@@ -33,7 +33,7 @@ net.Receive("slvl_admin_setlevel", function(_, ply)
     SLVL.Notify(ply, "Niveau de " .. sid .. " slot " .. slot .. " = " .. v .. ".", "info")
 end)
 
-net.Receive("slvl_admin_givepoints", function(_, ply)
+SLVL.NetReceive("slvl_admin_givepoints", 0.3, function(_, ply)
     if not isAdmin(ply) then return end
     local sid, slot = readTarget()
     local n = net.ReadInt(32)
@@ -43,7 +43,7 @@ net.Receive("slvl_admin_givepoints", function(_, ply)
     SLVL.Notify(ply, "Points bonus de " .. sid .. " slot " .. slot .. " = " .. bonus .. ".", "info")
 end)
 
-net.Receive("slvl_admin_givereset", function(_, ply)
+SLVL.NetReceive("slvl_admin_givereset", 0.3, function(_, ply)
     if not isAdmin(ply) then return end
     local sid, slot = readTarget()
     local n = net.ReadInt(32)
@@ -62,7 +62,7 @@ local function sendXPMult(ply)
     net.Send(ply)
 end
 
-net.Receive("slvl_set_xpmult", function(_, ply)
+SLVL.NetReceive("slvl_set_xpmult", 0.3, function(_, ply)
     if not isAdmin(ply) then return end
     local v = net.ReadFloat()
     v = math.Clamp(v or 0, 0, 1000)
@@ -73,7 +73,7 @@ net.Receive("slvl_set_xpmult", function(_, ply)
     sendXPMult(ply)
 end)
 
-net.Receive("slvl_req_xpmult", function(_, ply)
+SLVL.NetReceive("slvl_req_xpmult", 0.15, function(_, ply)
     if not isAdmin(ply) then return end
     sendXPMult(ply)
 end)

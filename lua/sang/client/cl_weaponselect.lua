@@ -160,22 +160,32 @@ local function drawHeader(x, y, w, h, num, sel)
 end
 
 local function drawCell(x, y, w, wep, sel)
+    -- La case visée (celle sur laquelle on défile) est légèrement PLUS GRANDE
+    -- que les autres : on l'élargit un peu (débordant dans les gouttières) et
+    -- on la rehausse d'un cran.
+    local grow = sel and S(12) or 0
+    local gx = x - grow / 2
+    local gw = w + grow
+
     local padX = S(10)
     local font = sel and "SangUI_Body" or "SangUI_Small"
-    local lines = wrap(wepName(wep), font, w - padX * 2)
+    local lines = wrap(wepName(wep), font, gw - padX * 2)
     surface.SetFont(font)
     local _, lineH = surface.GetTextSize("Aj")
-    local h = math.max(S(30), #lines * lineH + S(16))
+    local h = math.max(S(30), #lines * lineH + S(16)) + (sel and S(10) or 0)
 
-    UI.VGradient(x, y, w, h, sel and UI.Shade(C.bg3, 8) or C.bg2, C.bg0)
+    UI.VGradient(gx, y, gw, h, sel and UI.Shade(C.bg3, 8) or C.bg2, C.bg0)
     surface.SetDrawColor(sel and C.gold or C.goldDk)
-    surface.DrawOutlinedRect(x, y, w, h, sel and 2 or 1)
-    if sel then surface.SetDrawColor(C.blood) surface.DrawRect(x, y, S(3), h) end
+    surface.DrawOutlinedRect(gx, y, gw, h, sel and 2 or 1)
+    if sel then
+        UI.CornerBrackets(gx, y, gw, h, S(9), C.goldLt)
+        surface.SetDrawColor(C.blood) surface.DrawRect(gx, y, S(3), h)
+    end
 
     local ty = y + S(8)
     local tcol = sel and C.txt or C.txtDim
     for _, ln in ipairs(lines) do
-        draw.SimpleText(ln, font, x + padX, ty, tcol, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+        draw.SimpleText(ln, font, gx + padX, ty, tcol, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
         ty = ty + lineH
     end
 
@@ -183,8 +193,8 @@ local function drawCell(x, y, w, wep, sel)
     local rem = remaining(wep)
     if rem > 0.05 then
         local txt = string.format("%.1fs", rem)
-        draw.SimpleText(txt, "SangWep_CD", x + w - S(8) + 1, y + h - S(6) + 1, Color(0, 0, 0, 200), TEXT_ALIGN_RIGHT, TEXT_ALIGN_BOTTOM)
-        draw.SimpleText(txt, "SangWep_CD", x + w - S(8), y + h - S(6), Color(206, 42, 42), TEXT_ALIGN_RIGHT, TEXT_ALIGN_BOTTOM)
+        draw.SimpleText(txt, "SangWep_CD", gx + gw - S(8) + 1, y + h - S(6) + 1, Color(0, 0, 0, 200), TEXT_ALIGN_RIGHT, TEXT_ALIGN_BOTTOM)
+        draw.SimpleText(txt, "SangWep_CD", gx + gw - S(8), y + h - S(6), Color(206, 42, 42), TEXT_ALIGN_RIGHT, TEXT_ALIGN_BOTTOM)
     end
 
     return h

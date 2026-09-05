@@ -23,7 +23,9 @@ end
 ----------------------------------------------------------------------
 -- Reroll payant
 ----------------------------------------------------------------------
-net.Receive("blood_reroll", function(_, ply)
+BLOOD.NetReceive("blood_reroll", 0.3, function(_, ply)
+    -- Un reroll déjà en cours (animation) bloque tout nouveau spin.
+    if ply.BloodRerolling and CurTime() < ply.BloodRerolling then return end
     if onCooldown(ply) then return end
     if not BLOOD.HasCharacter(ply) then
         BLOOD.Notify(ply, "Crée d'abord un personnage.", "error")
@@ -44,14 +46,25 @@ net.Receive("blood_reroll", function(_, ply)
 
     -- Tirage pondéré serveur-side
     local newRace = BLOOD.RollRace()
-    BLOOD.SetRace(ply, ply.BloodActiveSlot or 1, newRace)
+    local slot    = ply.BloodActiveSlot or 1
+    local animT   = BLOOD.Config.RerollAnimTime or 4.2
 
-    -- Roulette côté joueur
+    -- Marque le reroll comme "en cours" : bloque un nouveau spin le temps de l'anim.
+    ply.BloodRerolling = CurTime() + animT
+
+    -- Roulette côté joueur (la lignée n'est PAS encore appliquée).
     net.Start("blood_reroll_roll")
     net.WriteString(newRace)
     net.Send(ply)
 
-    -- Annonce publique (différée pour ne pas spoiler la roulette)
+    -- Application de la lignée UNIQUEMENT à la fin de l'animation.
+    timer.Simple(animT, function()
+        if not IsValid(ply) then return end
+        ply.BloodRerolling = nil
+        BLOOD.SetRace(ply, slot, newRace)
+    end)
+
+    -- Annonce publique (juste après la révélation).
     local plyName = ply:Nick()
     timer.Simple(BLOOD.Config.RerollAnnounceDelay or 4.6, function()
         net.Start("blood_reroll_announce")
@@ -59,17 +72,4 @@ net.Receive("blood_reroll", function(_, ply)
         net.WriteString(newRace)
         net.Broadcast()
     end)
-end)
-
-----------------------------------------------------------------------
--- Retour Humain gratuit
-----------------------------------------------------------------------
-net.Receive("blood_return_human", function(_, ply)
-    if onCooldown(ply) then return end
-    if not BLOOD.HasCharacter(ply) then
-        BLOOD.Notify(ply, "Crée d'abord un personnage.", "error")
-        return
-    end
-    BLOOD.SetRace(ply, ply.BloodActiveSlot or 1, "human")
-    BLOOD.Notify(ply, "Retour en Humain (gratuit).", "info")
 end)

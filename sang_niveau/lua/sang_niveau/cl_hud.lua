@@ -34,7 +34,8 @@ hook.Add("HUDPaint", "SLVL_HUD", function()
     local UI, C, S = BLOOD.UI, BLOOD.UI.Col, BLOOD.UI.Scale
     local d = SLVL.My
 
-    local w, h = S(320), S(58)
+    -- Plaque allongée (barre d'XP bien plus longue).
+    local w, h = S(480), S(58)
     local x = (ScrW() - w) / 2
     local y = S(10)
 

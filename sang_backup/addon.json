@@ -1,0 +1,6 @@
+{
+    "title": "Sang et Nuit — Backup (sauvegarde SQL)",
+    "type": "servercontent",
+    "tags": ["roleplay", "build"],
+    "ignore": ["*.md", "*.txt", ".git/*", ".gitignore"]
+}

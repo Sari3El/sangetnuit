@@ -12,6 +12,11 @@ local function notify(ply, msg, kind)
 end
 SBANK.Notify = notify
 
+-- Enregistre une action dans l'historique persistant (100 dernières).
+function SBANK.LogHistory(e)
+    if SBANK.SQL and SBANK.SQL.AddHistory then SBANK.SQL.AddHistory(e) end
+end
+
 -- Le joueur est-il à portée d'une banque ?
 function SBANK.IsNearBank(ply)
     if not IsValid(ply) then return false end
@@ -51,7 +56,7 @@ end
 ----------------------------------------------------------------------
 -- Dépôt
 ----------------------------------------------------------------------
-net.Receive("sang_bank_deposit", function(_, ply)
+SBANK.NetReceive("sang_bank_deposit", 0.4, function(_, ply)
     local amount = net.ReadUInt(32)
     if amount <= 0 then return end
     if not SBANK.IsNearBank(ply) then notify(ply, "Approche-toi d'une banque.", "error") return end
@@ -71,6 +76,12 @@ net.Receive("sang_bank_deposit", function(_, ply)
     SBANK.AddPersonal(sid, slot, net_)
     if tax > 0 then SBANK.AddFaction(C.TaxBank, tax) end
 
+    SBANK.LogHistory({
+        action = "depot", actor = sid, actor_name = ply:Nick(),
+        target = sid, slot = slot, amount = net_,
+        detail = (tax > 0 and ("taxe " .. tax) or ""),
+    })
+
     notify(ply, "Dépôt : " .. net_ .. " en banque (taxe " .. tax .. ").", "info")
     SBANK.Sync(ply)
 end)
@@ -78,7 +89,7 @@ end)
 ----------------------------------------------------------------------
 -- Retrait
 ----------------------------------------------------------------------
-net.Receive("sang_bank_withdraw", function(_, ply)
+SBANK.NetReceive("sang_bank_withdraw", 0.4, function(_, ply)
     local amount = net.ReadUInt(32)
     if amount <= 0 then return end
     if not SBANK.IsNearBank(ply) then notify(ply, "Approche-toi d'une banque.", "error") return end
@@ -98,11 +109,17 @@ net.Receive("sang_bank_withdraw", function(_, ply)
     BLOOD.AddCovan(ply, net_)
     if tax > 0 then SBANK.AddFaction(C.TaxBank, tax) end
 
+    SBANK.LogHistory({
+        action = "retrait", actor = sid, actor_name = ply:Nick(),
+        target = sid, slot = slot, amount = -amount,
+        detail = (tax > 0 and ("net " .. net_ .. ", taxe " .. tax) or ""),
+    })
+
     notify(ply, "Retrait : " .. net_ .. " sur toi (taxe " .. tax .. ").", "info")
     SBANK.Sync(ply)
 end)
 
-net.Receive("sang_bank_reqsync", function(_, ply)
+SBANK.NetReceive("sang_bank_reqsync", 0.5, function(_, ply)
     SBANK.Sync(ply)
 end)
 
@@ -118,11 +135,32 @@ function SBANK.SendQuery(ply, sid, slot, amount)
 end
 
 -- L'admin demande le solde d'un joueur/slot.
-net.Receive("sang_bank_query", function(_, ply)
+SBANK.NetReceive("sang_bank_query", 0.15, function(_, ply)
     if not (BLOOD and BLOOD.IsAdmin and BLOOD.IsAdmin(ply)) then return end
     local rawSid = net.ReadString()
     local slot = net.ReadUInt(8)
     local sid = BLOOD and BLOOD.NormalizeSteamID and BLOOD.NormalizeSteamID(rawSid) or nil
     if not sid or slot < 1 or slot > 4 then return end
     SBANK.SendQuery(ply, sid, slot, SBANK.GetPersonal(sid, slot))
+end)
+
+----------------------------------------------------------------------
+-- Historique (admin uniquement) : envoie les 100 dernières actions
+----------------------------------------------------------------------
+SBANK.NetReceive("sang_bank_hist_req", 0.5, function(_, ply)
+    if not (BLOOD and BLOOD.IsAdmin and BLOOD.IsAdmin(ply)) then return end
+    local list = (SBANK.SQL and SBANK.SQL.GetHistory) and SBANK.SQL.GetHistory() or {}
+
+    net.Start("sang_bank_hist_data")
+        net.WriteUInt(#list, 8) -- <= 100
+        for _, h in ipairs(list) do
+            net.WriteUInt(math.max(0, h.ts or 0), 32)
+            net.WriteString(h.action or "")
+            net.WriteString(h.actor_name or "")
+            net.WriteString(h.target or "")
+            net.WriteUInt(math.Clamp(h.slot or 0, 0, 255), 8)
+            net.WriteInt(math.Clamp(h.amount or 0, -2147483647, 2147483647), 32)
+            net.WriteString(string.sub(h.detail or "", 1, 64))
+        end
+    net.Send(ply)
 end)

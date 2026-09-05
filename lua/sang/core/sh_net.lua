@@ -15,7 +15,6 @@ if SERVER then
     util.AddNetworkString("blood_select_slot")   -- jouer un slot
     util.AddNetworkString("blood_create_slot")   -- créer un slot
     util.AddNetworkString("blood_reroll")        -- reroll payant
-    util.AddNetworkString("blood_return_human")  -- retour Humain gratuit
     util.AddNetworkString("blood_reroll_roll")     -- S->C (joueur) : lance la roulette
     util.AddNetworkString("blood_reroll_announce") -- S->C (tous) : annonce colorée
 
@@ -27,4 +26,9 @@ if SERVER then
     util.AddNetworkString("origines_set_covan")
     util.AddNetworkString("origines_query_slot")  -- C->S : infos d'un slot
     util.AddNetworkString("origines_slot_info")   -- S->C : nom/race/covan d'un slot
+
+    -- Admin : édition de la rareté des sangs (Gestion serveur)
+    util.AddNetworkString("origines_req_rarity")   -- C->S : demander la table de rareté
+    util.AddNetworkString("origines_rarity_data")  -- S->C : poids + palier de chaque sang
+    util.AddNetworkString("origines_set_rarity")   -- C->S : régler poids + palier d'un sang
 end

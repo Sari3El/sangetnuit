@@ -71,6 +71,21 @@ hook.Add("BLOOD_PostApplyStats", "SLVL_Sync", function(ply)
     SLVL.Sync(ply)
 end)
 
+-- Changement de personnage : on vide le cache pour recharger la progression
+-- (niveau / points) du NOUVEAU slot au respawn.
+hook.Add("BLOOD_CharacterChanged", "SLVL_CharChange", function(ply, slot)
+    ply.SLVL = nil
+    ply.SLVLSlot = nil
+end)
+
+-- Sauvegarde globale (déclenchée par l'addon sang_backup) : flush des
+-- progressions des joueurs en ligne vers la SQL avant le dump.
+hook.Add("Sang_SaveAll", "SLVL_SaveAll", function()
+    for _, ply in ipairs(player.GetAll()) do
+        SLVL.Save(ply)
+    end
+end)
+
 ----------------------------------------------------------------------
 -- Effets sur les dégâts (Force / Résistance)
 ----------------------------------------------------------------------
@@ -136,7 +151,7 @@ end
 
 local VALID_STATS = { force = true, resist = true, agilite = true, vitalite = true }
 
-net.Receive("slvl_spend", function(_, ply)
+SLVL.NetReceive("slvl_spend", 0.15, function(_, ply)
     local key = net.ReadString()
     if not ply.SLVL or not VALID_STATS[key] then return end
     if not SLVL.IsNearStats(ply) then notify(ply, "Approche-toi d'une borne.", "error") return end
@@ -149,7 +164,7 @@ net.Receive("slvl_spend", function(_, ply)
     ply:EmitSound(C.SpendSound)
 end)
 
-net.Receive("slvl_respec", function(_, ply)
+SLVL.NetReceive("slvl_respec", 1.0, function(_, ply)
     if not ply.SLVL then return end
     if not SLVL.IsNearStats(ply) then notify(ply, "Approche-toi d'une borne.", "error") return end
     if (ply.SLVL.reset or 0) <= 0 then notify(ply, "Aucun point de reset.", "error") return end

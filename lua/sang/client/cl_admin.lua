@@ -358,6 +358,113 @@ end
 BLOOD.Origines.AddPage({ id = "joueurs", label = "Gestion Joueurs", order = 1, kind = "gold",  build = buildPlayerPage })
 BLOOD.Origines.AddPage({ id = "serveur", label = "Gestion Serveur", order = 2, kind = "blood", build = buildServerPage })
 
+----------------------------------------------------------------------
+-- Section serveur : rareté des sangs (poids de tirage + palier)
+----------------------------------------------------------------------
+local TIER_ORDER = { "commun", "peucommun", "rare", "epique", "mythique", "legendaire" }
+
+local function tierLabel(key)
+    local t = BLOOD.Config.Tiers and BLOOD.Config.Tiers[key]
+    return t and t.name or key
+end
+local function tierColor(key)
+    local t = BLOOD.Config.Tiers and BLOOD.Config.Tiers[key]
+    return t and t.color or C.txt
+end
+
+-- Reconstruit la liste des sangs avec leur poids / palier / chance.
+function BLOOD.RenderRarity()
+    local host = BLOOD._rarityHost
+    if not IsValid(host) then return end
+    host:Clear()
+
+    local data = BLOOD.RarityData
+    if not data then
+        local l = vgui.Create("DLabel", host)
+        l:Dock(TOP) l:DockMargin(0, S(6), 0, 0) l:SetFont("SangUI_Small") l:SetTextColor(C.txtDim)
+        l:SetText("Chargement…")
+        host:SetTall(S(28))
+        return
+    end
+
+    local rowH = S(30)
+    for _, r in ipairs(data) do
+        local row = vgui.Create("DPanel", host)
+        row:Dock(TOP) row:DockMargin(0, 0, 0, S(4)) row:SetTall(rowH)
+        row.Paint = function(_, w, h)
+            surface.SetDrawColor(C.goldDk); surface.DrawOutlinedRect(0, 0, w, h, 1)
+        end
+
+        local name = vgui.Create("DLabel", row)
+        name:Dock(LEFT) name:SetWide(S(150)) name:DockMargin(S(6), 0, 0, 0)
+        name:SetFont("SangUI_Small") name:SetTextColor(C.txt) name:SetText(r.name)
+
+        local apply = vgui.Create("DButton", row)
+        apply:Dock(RIGHT) apply:SetWide(S(80)) apply:DockMargin(S(4), S(3), S(4), S(3))
+        apply:SetText("Régler")
+        UI.SkinButton(apply, "gold")
+
+        local chance = vgui.Create("DLabel", row)
+        chance:Dock(RIGHT) chance:SetWide(S(84))
+        chance:SetFont("SangUI_Small") chance:SetTextColor(C.goldLt)
+        chance:SetContentAlignment(6)
+        chance:SetText(string.format("%.2f%%", r.chance or 0))
+
+        local tierCombo = vgui.Create("DComboBox", row)
+        tierCombo:Dock(RIGHT) tierCombo:SetWide(S(130)) tierCombo:DockMargin(S(4), S(3), S(4), S(3))
+        UI.SkinCombo(tierCombo)
+        for _, key in ipairs(TIER_ORDER) do tierCombo:AddChoice(tierLabel(key), key) end
+        tierCombo:SetValue(tierLabel(r.tier))
+        tierCombo._tier = r.tier
+        tierCombo.OnSelect = function(_, _, _, data2) tierCombo._tier = data2 end
+
+        local weight = vgui.Create("DTextEntry", row)
+        weight:Dock(FILL) weight:DockMargin(S(6), S(3), S(4), S(3))
+        weight:SetNumeric(true) weight:SetText(tostring(r.weight or 0))
+        UI.SkinEntry(weight)
+
+        apply.DoClick = function()
+            net.Start("origines_set_rarity")
+            net.WriteString(r.id)
+            net.WriteUInt(math.Clamp(math.floor(tonumber(weight:GetValue()) or 0), 0, 100000), 32)
+            net.WriteString(tierCombo._tier or r.tier or "commun")
+            net.SendToServer()
+        end
+    end
+
+    host:SetTall(#data * (rowH + S(4)) + S(4))
+    if IsValid(host:GetParent()) then host:GetParent():InvalidateLayout() end
+end
+
+net.Receive("origines_rarity_data", function()
+    local n = net.ReadUInt(8)
+    local list = {}
+    for _ = 1, n do
+        list[#list + 1] = {
+            id     = net.ReadString(),
+            name   = net.ReadString(),
+            weight = net.ReadUInt(32),
+            chance = net.ReadFloat(),
+            tier   = net.ReadString(),
+        }
+    end
+    BLOOD.RarityData = list
+    if IsValid(BLOOD._rarityHost) then BLOOD.RenderRarity() end
+end)
+
+BLOOD.Origines.AddServerSection(function(parent)
+    sectionLabel(parent, "Rareté des sangs  (poids de tirage + palier)")
+    fieldLabel(parent, "Poids = chance relative au reroll (plus il est haut, plus le sang est commun). Le palier change la couleur/nom de rareté.")
+
+    local host = vgui.Create("DPanel", parent)
+    host:Dock(TOP) host:DockMargin(0, S(4), S(6), S(6)) host:SetTall(S(28))
+    host.Paint = function() end
+    BLOOD._rarityHost = host
+
+    net.Start("origines_req_rarity") net.SendToServer()
+    BLOOD.RenderRarity() -- affiche l'état courant (ou « Chargement… »)
+end)
+
 function BLOOD.OpenAdminMenu(races)
     if IsValid(BLOOD.AdminFrame) then BLOOD.AdminFrame:Remove() end
     local f = UI.MakeFrame(S(760), S(720), "Sang et Nuit — Origines (Admin)")

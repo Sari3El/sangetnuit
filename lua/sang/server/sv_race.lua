@@ -6,17 +6,76 @@ BLOOD = BLOOD or {}
 
 ----------------------------------------------------------------------
 -- Tirage pondéré (SERVEUR UNIQUEMENT)
---   Entier sur plage large (1..10000), jamais de float => 1/1000 exact.
+--   Basé sur le "poids" de chaque race (race.weight). Par défaut le poids
+--   vaut l'amplitude de sa plage d'origine (max-min+1), mais un admin peut
+--   le modifier via l'éditeur de rareté (persistant en SQL).
 ----------------------------------------------------------------------
 function BLOOD.RollRace()
-    local r = math.random(1, 10000)
+    local total = 0
     for _, race in ipairs(BLOOD.Config.Races) do
-        if r >= race.min and r <= race.max then
-            return race.id
-        end
+        total = total + math.max(0, race.weight or 0)
+    end
+    if total <= 0 then return "human" end
+
+    local r = math.random(1, total)
+    local acc = 0
+    for _, race in ipairs(BLOOD.Config.Races) do
+        acc = acc + math.max(0, race.weight or 0)
+        if r <= acc then return race.id end
     end
     return "human"
 end
+
+----------------------------------------------------------------------
+-- Rareté : poids de tirage + palier (tier) par race, avec override admin
+--   persistant. Recalculé au chargement et à chaque modification.
+----------------------------------------------------------------------
+--- Chance de tirage (%) d'une race d'après les poids courants.
+function BLOOD.RarityChance(raceId)
+    local total = 0
+    for _, race in ipairs(BLOOD.Config.Races) do
+        total = total + math.max(0, race.weight or 0)
+    end
+    if total <= 0 then return 0 end
+    local r = BLOOD.Races[raceId]
+    return 100 * math.max(0, (r and r.weight or 0)) / total
+end
+
+--- Charge les poids par défaut (depuis min/max) puis applique les overrides SQL.
+function BLOOD.LoadRarity()
+    -- Poids par défaut = amplitude de la plage d'origine.
+    for _, race in ipairs(BLOOD.Config.Races) do
+        race.baseWeight = math.max(0, (race.max or 0) - (race.min or 0) + 1)
+        race.weight = race.weight or race.baseWeight
+    end
+
+    local ov = BLOOD.SQL.GetRarityOverrides and BLOOD.SQL.GetRarityOverrides() or {}
+    for id, data in pairs(ov) do
+        local race = BLOOD.Races[id]
+        if race then
+            race.weight = math.max(0, math.floor(data.weight or race.baseWeight))
+            if data.tier ~= "" and BLOOD.Config.Tiers[data.tier] then
+                BLOOD.Config.RaceTiers[id] = data.tier
+            end
+        end
+    end
+end
+
+--- Modifie la rareté d'une race (poids + palier) et persiste.
+function BLOOD.SetRarity(raceId, weight, tier)
+    local race = BLOOD.Races[raceId]
+    if not race then return false end
+    weight = math.Clamp(math.floor(tonumber(weight) or 0), 0, 100000)
+    if not (tier and BLOOD.Config.Tiers[tier]) then
+        tier = BLOOD.Config.RaceTiers[raceId] or "commun"
+    end
+    race.weight = weight
+    BLOOD.Config.RaceTiers[raceId] = tier
+    if BLOOD.SQL.SetRarity then BLOOD.SQL.SetRarity(raceId, weight, tier) end
+    return true
+end
+
+BLOOD.LoadRarity()
 
 ----------------------------------------------------------------------
 -- Race active d'un joueur (depuis le cache mémoire du slot actif)

@@ -40,6 +40,13 @@ hook.Add("BLOOD_ComputeStats", "SJOB_Compute", function(ply, stats)
     stats.speedMul = stats.speedMul * (job.speed or 1)
 end)
 
+-- Changement de personnage : on vide le cache job pour forcer un rechargement
+-- du job enregistré du NOUVEAU slot (sinon on garderait le job du slot précédent).
+hook.Add("BLOOD_CharacterChanged", "SJOB_CharChange", function(ply, slot)
+    ply.SJob = nil
+    ply.SJobSlot = nil
+end)
+
 --- Change le job du personnage actif (respawn pour appliquer proprement).
 function SJOB.SetJob(ply, jobId, silent)
     if not IsValid(ply) or not SJOB.JobExists(jobId) then return end
@@ -62,7 +69,7 @@ end
 ----------------------------------------------------------------------
 -- F4 : choix de job
 ----------------------------------------------------------------------
-net.Receive("sjob_set", function(_, ply)
+SJOB.NetReceive("sjob_set", 0.5, function(_, ply)
     local jobId = net.ReadString()
     if BLOOD.HasCharacter and not BLOOD.HasCharacter(ply) then
         notify(ply, "Crée d'abord un personnage.", "error")
@@ -85,7 +92,7 @@ local function log(ply, line)
 end
 
 -- Forcer le job d'un slot d'un joueur.
-net.Receive("sjob_admin_setjob", function(_, ply)
+SJOB.NetReceive("sjob_admin_setjob", 0.3, function(_, ply)
     if not isAdmin(ply) then return end
     local sid = BLOOD.NormalizeSteamID(net.ReadString())
     local slot = net.ReadUInt(8)
@@ -102,7 +109,7 @@ net.Receive("sjob_admin_setjob", function(_, ply)
 end)
 
 -- Override PV/armure/vitesse d'un (joueur, job). -1 = non défini.
-net.Receive("sjob_admin_setoverride", function(_, ply)
+SJOB.NetReceive("sjob_admin_setoverride", 0.3, function(_, ply)
     if not isAdmin(ply) then return end
     local sid = BLOOD.NormalizeSteamID(net.ReadString())
     local jobId = net.ReadString()
@@ -121,7 +128,7 @@ net.Receive("sjob_admin_setoverride", function(_, ply)
     notify(ply, "Override enregistré (" .. sid .. " / " .. jobId .. ").", "info")
 end)
 
-net.Receive("sjob_admin_clearoverride", function(_, ply)
+SJOB.NetReceive("sjob_admin_clearoverride", 0.3, function(_, ply)
     if not isAdmin(ply) then return end
     local sid = BLOOD.NormalizeSteamID(net.ReadString())
     local jobId = net.ReadString()
@@ -136,7 +143,7 @@ net.Receive("sjob_admin_clearoverride", function(_, ply)
 end)
 
 -- Requête : défauts du job + override actuel
-net.Receive("sjob_query", function(_, ply)
+SJOB.NetReceive("sjob_query", 0.15, function(_, ply)
     if not isAdmin(ply) then return end
     local sid = BLOOD.NormalizeSteamID(net.ReadString())
     local jobId = net.ReadString()

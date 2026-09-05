@@ -119,7 +119,7 @@ end)
 ----------------------------------------------------------------------
 -- Sélection d'un slot (le "jouer")
 ----------------------------------------------------------------------
-net.Receive("blood_select_slot", function(_, ply)
+BLOOD.NetReceive("blood_select_slot", 0.5, function(_, ply)
     local slot = net.ReadUInt(8)
     if slot < 1 or slot > C.MaxSlots then return end
 
@@ -135,6 +135,9 @@ net.Receive("blood_select_slot", function(_, ply)
     ply.BloodActiveSlot = slot
     BLOOD.SQL.SetActiveSlot(ply:SteamID64(), slot)
     BLOOD.SetLocked(ply, false)
+    -- Prévient les autres systèmes (jobs, niveaux...) qu'on change de perso :
+    -- ils vident leur cache par-slot AVANT le respawn (job/niveau du bon slot).
+    hook.Run("BLOOD_CharacterChanged", ply, slot)
     ply:Spawn() -- respawn => ApplyRaceStats via le hook PlayerSpawn
     BLOOD.SyncPlayer(ply)
     BLOOD.Notify(ply, "Personnage " .. slot .. " sélectionné.", "info")
@@ -145,7 +148,7 @@ end)
 --   Le nom est définitif côté joueur (seul un admin peut renommer).
 --   Le premier perso créé devient actif et déverrouille le joueur.
 ----------------------------------------------------------------------
-net.Receive("blood_create_slot", function(_, ply)
+BLOOD.NetReceive("blood_create_slot", 1, function(_, ply)
     local slot = net.ReadUInt(8)
     local name = string.Trim(string.sub(net.ReadString() or "", 1, 32))
     if slot < 1 or slot > C.MaxSlots then return end
@@ -178,6 +181,7 @@ net.Receive("blood_create_slot", function(_, ply)
         ply.BloodActiveSlot = slot
         BLOOD.SQL.SetActiveSlot(ply:SteamID64(), slot)
         BLOOD.SetLocked(ply, false)
+        hook.Run("BLOOD_CharacterChanged", ply, slot)
         ply:Spawn()
     end
 
@@ -188,7 +192,7 @@ end)
 ----------------------------------------------------------------------
 -- Le client redemande son état
 ----------------------------------------------------------------------
-net.Receive("blood_request_sync", function(_, ply)
+BLOOD.NetReceive("blood_request_sync", 0.5, function(_, ply)
     BLOOD.SyncPlayer(ply)
 end)
 

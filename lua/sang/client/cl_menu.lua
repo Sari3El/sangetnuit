@@ -1,6 +1,6 @@
 --[[-------------------------------------------------------------------------
-    Sang et Nuit — Menu joueur (personnages / reroll / retour Humain)
-    Ouvert via !perso (ou console : sang_menu). Style commun BLOOD.UI.
+    Sang et Nuit — Menu joueur (personnages / reroll)
+    Ouvert via l'entité borne perso. Style commun BLOOD.UI.
 ---------------------------------------------------------------------------]]
 
 BLOOD = BLOOD or {}
@@ -55,7 +55,7 @@ function BLOOD.RefreshMenu()
             draw.SimpleText(tostring(d.credits or 0), "SangUI_H1", w - S(14), h / 2, C.goldLt, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
         end
 
-        -- Bloc bas : reroll / retour humain
+        -- Bloc bas : reroll
         local bottom = vgui.Create("DPanel", body)
         bottom:Dock(BOTTOM) bottom:DockMargin(0, S(8), 0, 0) bottom:SetTall(S(84))
         bottom.Paint = function(_, w, h)
@@ -66,16 +66,15 @@ function BLOOD.RefreshMenu()
         end
 
         local reroll = vgui.Create("DButton", bottom)
-        reroll:Dock(LEFT) reroll:DockMargin(0, S(28), S(6), S(4)) reroll:SetWide(S(240))
+        reroll:Dock(FILL) reroll:DockMargin(0, S(28), 0, S(4))
         reroll:SetText("Reroll  (" .. cfg.RerollCost .. " crédit" .. (cfg.RerollCost > 1 and "s" or "") .. ")")
         UI.SkinButton(reroll, "blood")
-        reroll.DoClick = function() net.Start("blood_reroll") net.SendToServer() end
-
-        local human = vgui.Create("DButton", bottom)
-        human:Dock(FILL) human:DockMargin(S(6), S(28), 0, S(4))
-        human:SetText("Retour Humain  (gratuit)")
-        UI.SkinButton(human, "default")
-        human.DoClick = function() net.Start("blood_return_human") net.SendToServer() end
+        -- Désactivé pendant qu'une roulette est en cours (anti-relance).
+        reroll:SetEnabled(not BLOOD.Rerolling)
+        reroll.DoClick = function()
+            if BLOOD.Rerolling then return end
+            net.Start("blood_reroll") net.SendToServer()
+        end
     end
 
     -- Liste des slots
@@ -121,6 +120,8 @@ function BLOOD.RefreshMenu()
             UI.SkinButton(play, active and "default" or "gold")
             play.DoClick = function()
                 net.Start("blood_select_slot") net.WriteUInt(i, 8) net.SendToServer()
+                -- Fermer le menu à la sélection (évite d'enchaîner les changements).
+                if IsValid(BLOOD.MenuFrame) then BLOOD.MenuFrame:Remove() end
             end
         elseif not locked then
             local create = vgui.Create("DButton", row)

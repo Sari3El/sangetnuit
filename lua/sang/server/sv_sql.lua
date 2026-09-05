@@ -53,6 +53,35 @@ function BLOOD.SQL.Init()
     if not has.hunger then
         sql.Query("ALTER TABLE blood_slots ADD COLUMN hunger INTEGER NOT NULL DEFAULT " .. defHunger .. ";")
     end
+
+    -- Rareté des sangs : override admin du poids de tirage + palier par race.
+    sql.Query([[CREATE TABLE IF NOT EXISTS blood_rarity (
+        race   TEXT PRIMARY KEY,
+        weight INTEGER NOT NULL DEFAULT 0,
+        tier   TEXT NOT NULL DEFAULT ''
+    );]])
+end
+
+----------------------------------------------------------------------
+-- Rareté (override admin persistant)
+----------------------------------------------------------------------
+
+--- Retourne { [raceId] = { weight = , tier = } } pour tous les overrides.
+function BLOOD.SQL.GetRarityOverrides()
+    local rows = sql.Query("SELECT race, weight, tier FROM blood_rarity;")
+    local out = {}
+    if istable(rows) then
+        for _, r in ipairs(rows) do
+            out[r.race] = { weight = tonumber(r.weight) or 0, tier = r.tier or "" }
+        end
+    end
+    return out
+end
+
+--- Écrit (ou remplace) l'override de rareté d'une race.
+function BLOOD.SQL.SetRarity(raceId, weight, tier)
+    sql.Query("INSERT OR REPLACE INTO blood_rarity (race, weight, tier) VALUES ("
+        .. E(raceId) .. ", " .. N(weight) .. ", " .. E(tostring(tier or "")) .. ");")
 end
 
 --- Crée la ligne joueur si elle n'existe pas.
