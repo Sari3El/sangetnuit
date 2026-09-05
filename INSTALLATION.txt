@@ -1,0 +1,203 @@
+==========================================================================
+  SANG ET NUIT — GUIDE DE RANGEMENT & D'INSTALLATION (serveur SOLO / local)
+==========================================================================
+
+Ce fichier explique OU RANGER chaque chose et COMMENT tester l'addon sur ton
+propre serveur solo (serveur "ecoute", ouvert depuis tes fichiers locaux, PAS
+un serveur paye/heberge).
+
+Tout est deja range correctement dans ce depot. Il te suffit de copier le
+dossier au bon endroit. Le detail ci-dessous est la pour que tu comprennes a
+quoi sert chaque fichier et ou ajouter tes propres choses plus tard.
+
+
+--------------------------------------------------------------------------
+1) OU METTRE L'ADDON POUR UN TEST SOLO
+--------------------------------------------------------------------------
+
+Ton dossier Garry's Mod se trouve (sous Windows) typiquement ici :
+
+  C:\Program Files (x86)\Steam\steamapps\common\GarrysMod\garrysmod\addons\
+
+Copie TOUT ce dossier (celui qui contient "lua/" et "addon.json") dedans, en
+lui donnant un nom clair, par exemple :
+
+  ...\garrysmod\addons\sang_et_nuit\
+        |-- addon.json
+        |-- lua\
+        |     |-- autorun\...
+        |     |-- sang\...
+        |-- INSTALLATION.txt
+        |-- README.md
+
+IMPORTANT : le dossier "lua" doit rester DIRECTEMENT dans "sang_et_nuit\".
+Ne mets pas un sous-dossier en trop entre "sang_et_nuit" et "lua".
+Chemin final attendu :
+  ...\addons\sang_et_nuit\lua\autorun\sang_init.lua
+
+C'est tout. En jeu, GMod charge automatiquement le dossier "lua/autorun".
+
+
+--------------------------------------------------------------------------
+2) LANCER UN SERVEUR SOLO POUR TESTER
+--------------------------------------------------------------------------
+
+a) Lance Garry's Mod.
+b) "Nouvelle partie" (Start New Game).
+c) Choisis un mode de jeu :
+     - "Sandbox" : parfait pour un premier test rapide. L'addon marche en
+       Sandbox car le systeme est independant de DarkRP (les credits de
+       reroll sont une monnaie custom stockee a part, pas l'or DarkRP).
+     - "DarkRP" : le mode cible final (si tu l'as installe). Tout marche
+       pareil ; DarkRP n'est PAS obligatoire pour tester.
+d) Choisis une map, puis "Demarrer".
+e) Une fois en jeu, ouvre la console (touche F1/"~" selon ta config, ou
+   active la console dans Options > Clavier > Avance) et tu dois voir :
+       [Sang et Nuit] Charge (serveur) v1.0.0
+       [Sang et Nuit] Charge (client) v1.0.0
+       [Sang et Nuit] Table de rarete valide (1..10000).
+
+En serveur solo "ecoute", TU es l'hote et donc superadmin : le menu admin
+!origines fonctionne tout de suite (voir section 5).
+
+
+--------------------------------------------------------------------------
+3) LES COMMANDES EN JEU
+--------------------------------------------------------------------------
+
+  !perso          -> ouvre le menu Personnages (slots, reroll, retour Humain)
+                     (alias : !personnages, !races ; ou en console : sang_menu)
+  !origines       -> ouvre le menu Admin (reserve a la whitelist / superadmin)
+
+Ces commandes n'apparaissent PAS dans le chat public (elles sont avalees).
+
+
+--------------------------------------------------------------------------
+4) A QUOI SERT CHAQUE FICHIER (le "rangement")
+--------------------------------------------------------------------------
+
+lua/autorun/
+  sang_init.lua .............. Chargeur. Lu automatiquement par GMod. Definit
+                               la table globale BLOOD et charge tous les
+                               modules dans le bon ordre. (Ne pas y toucher
+                               sauf pour ajouter un nouveau fichier.)
+
+lua/sang/config/
+  sh_config.lua .............. ***LE FICHIER A EDITER***. Contient :
+                               - reglages generaux (PV/vitesse de base, slots,
+                                 cout du reroll, cooldown, regen...)
+                               - la WHITELIST admin (C.Admins) + AllowSuperAdmin
+                               - la TABLE DES RACES (rarete, multiplicateurs,
+                                 effets) : c'est ici qu'on equilibre.
+                               - les categories d'armes (bonus/malus degats).
+
+lua/sang/core/  (partage serveur + client)
+  sh_util.lua ................ Utilitaires (normalisation SteamID, etc.).
+  sh_races.lua ............... Construit l'index des races + verifie que les
+                               plages de rarete couvrent bien 1..10000.
+  sh_net.lua ................. Declare les "net strings" (canaux reseau).
+
+lua/sang/server/  (serveur uniquement — logique et securite)
+  sv_sql.lua ................. Persistance SQLite : credits (par joueur) et
+                               slots (nom + race). Fonctions AddCredits,
+                               GetCredits, gestion des slots, slot payant.
+  sv_race.lua ................ Tirage pondere (RollRace), application des stats
+                               au spawn (PV, vitesse, SWEP), SetRace.
+  sv_stats.lua ............... Combat/passifs : reduction & bonus de degats,
+                               esquive, resistances (feu/magie), regen,
+                               discretion (bruits de pas).
+  sv_players.lua ............. Cycle de vie joueur : chargement a la connexion,
+                               spawn, selection/creation de slot, synchro
+                               client, commande !perso.
+  sv_reroll.lua .............. Reroll payant (debit AVANT tirage) + retour
+                               Humain gratuit, cooldown anti-spam.
+  sv_admin.lua ............... Menu !origines : whitelist verifiee A CHAQUE
+                               action, donner des credits, definir une race
+                               sur un slot (marche hors-ligne), logs.
+
+lua/sang/client/  (client uniquement — interfaces)
+  cl_net.lua ................. Reception reseau + notifications chat.
+  cl_menu.lua ................ Menu joueur (Derma) : personnages/reroll/humain.
+  cl_admin.lua ............... Menu admin (Derma) : credits + set race.
+
+Fichiers stockes automatiquement en jeu (tu n'as rien a creer) :
+  garrysmod/sv.db ............ Base SQLite (credits + slots). Cree tout seul.
+  garrysmod/data/sang/admin_log.txt .. Journal des actions admin.
+
+
+--------------------------------------------------------------------------
+5) CONFIGURATION MINIMALE AVANT DE JOUER
+--------------------------------------------------------------------------
+
+Ouvre  lua/sang/config/sh_config.lua  :
+
+  - WHITELIST ADMIN :
+      Pour un test solo, rien a faire : C.AllowSuperAdmin = true, donc l'hote
+      (toi) peut utiliser !origines.
+      Pour un vrai serveur : ajoute ton SteamID64 dans C.Admins et mets
+      C.AllowSuperAdmin = false. Exemple :
+        C.Admins = { ["76561198000000000"] = true }
+      (Trouve ton SteamID64 sur https://steamid.io ou via la console : status)
+
+  - EQUILIBRAGE DES RACES :
+      Tout est dans la table C.Races (PV, vitesse, reduction, effets).
+      Rappels des regles a respecter en ajustant :
+        * la vitesse est deja x0.9 pour l'Humain (jeu volontairement lent) ;
+        * un modificateur ne s'ecarte jamais de +/-0.2 de la baseline
+          (exception : vitesse Homme-aigle = 1.15) ;
+        * le SAUT n'est jamais modifie.
+
+  - TES ARMES RP (bonus Elfe/Ogre/Demi-orc/Loup) :
+      Ajoute tes classes d'armes dans C.WeaponTags avec les bons tags
+      (lightblade / bow / heavymelee / melee / ranged). Des exemples sont
+      commentes dans le fichier.
+
+
+--------------------------------------------------------------------------
+6) TEST RAPIDE CONSEILLE (5 minutes)
+--------------------------------------------------------------------------
+
+  1. En jeu, tape  !origines  -> "Donner des credits" : mets ton propre
+     SteamID (ou choisis-toi dans la liste des joueurs connectes), 5 credits,
+     "Donner les credits".
+  2. Tape  !perso  -> tu vois "Credits de reroll : 5".
+  3. Clique "Reroll" plusieurs fois : la race change, le solde baisse.
+  4. Clique "Retour Humain (gratuit)" : tu redeviens Humain sans rien payer.
+  5. Cree un 2e personnage (slot 2), clique "Jouer" : tu respawn sur ce slot.
+  6. Re-teste !origines -> "Definir une race" (ex. Nain sur slot 1) : tu
+     verifies que les PV/vitesse changent bien.
+  7. Pour tester une race rare sans farmer le hasard, utilise "Definir une
+     race" (ex. Sang-dragon) : tu verras dans la console le message
+     "SWEP 'sang_swep_crachatfeu' non installee ..." -> c'est NORMAL (voir 7).
+
+
+--------------------------------------------------------------------------
+7) CE QUI N'EST PAS INCLUS (a faire plus tard)
+--------------------------------------------------------------------------
+
+Conformement a la demande, les 3 POUVOIRS EN SWEP ne sont PAS fournis :
+  - Sang-dragon : SWEP "Crachat de feu"   (classe prevue : sang_swep_crachatfeu)
+  - Homme-aigle : SWEP "Vol"              (classe prevue : sang_swep_vol)
+  - Sorcier     : module mana + SWEP sorts
+
+TOUT LE RESTE fonctionne (races, stats, tirage, reroll, slots, admin).
+Le cadre "donner/retirer la SWEP au spawn" est deja en place : tant que la
+SWEP n'existe pas, elle est simplement ignoree (aucune erreur bloquante, juste
+un avertissement en console).
+
+Quand tu voudras creer ces SWEP plus tard, range-les ici :
+  ...\addons\sang_et_nuit\lua\weapons\sang_swep_crachatfeu\
+        |-- shared.lua   (SWEP.Base, PrimaryAttack, etc.)
+        |-- ...
+  ...\addons\sang_et_nuit\lua\weapons\sang_swep_vol\
+  ...\addons\sang_et_nuit\lua\weapons\sang_swep_sort_xxx\
+
+GMod charge automatiquement le dossier lua/weapons/. Il suffira que la classe
+du dossier corresponde a celle indiquee dans C.Races (champ "weapons").
+Rien d'autre a modifier : la race donnera la SWEP toute seule au spawn.
+
+(Pour le "Crachat de feu", le SWEP devra lire une variable de puissance
+externe des le depart, pour pouvoir monter en puissance via un futur systeme
+d'upgrade — voir cahier des charges §4.4 / §7.)
+
+==========================================================================
