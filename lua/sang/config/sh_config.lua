@@ -62,6 +62,7 @@ C.MagicDamageBits = bit.bor(DMG_SHOCK, DMG_ENERGYBEAM)
 -- à chaque action. Exemple :
 --   C.Admins = { ["76561198000000000"] = true, ["76561198111111111"] = true }
 C.Admins = {
+    ["76561198300281314"] = true, -- Sariel (Sari3l)
     -- ["76561198XXXXXXXXX"] = true,
 }
 
