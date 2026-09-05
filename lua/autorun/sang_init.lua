@@ -41,7 +41,7 @@ local loaded, missing = 0, 0
 local function run(path, realm)
     -- 1) Envoi des fichiers shared/client au client
     if SERVER and (realm == "sh" or realm == "cl") then
-        AddCSLua(path)
+        AddCSLuaFile(path)
     end
 
     -- 2) Doit-on exécuter ce fichier dans le realm courant ?
