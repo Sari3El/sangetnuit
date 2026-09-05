@@ -34,6 +34,7 @@ local MODULES = {
     { "sang/client/cl_net.lua",   "cl" },
     { "sang/client/cl_menu.lua",  "cl" },
     { "sang/client/cl_admin.lua", "cl" },
+    { "sang/client/cl_hud.lua",   "cl" },
 }
 
 local loaded, missing = 0, 0
