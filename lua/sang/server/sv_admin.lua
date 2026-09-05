@@ -183,3 +183,49 @@ net.Receive("origines_set_paid", function(_, ply)
     BLOOD.Notify(ply, "Slot payant " .. (unlocked and "débloqué" or "verrouillé")
         .. " pour " .. sid .. ".", "info")
 end)
+
+----------------------------------------------------------------------
+-- Action : définir / ajouter des Covan sur un slot (marche hors-ligne)
+----------------------------------------------------------------------
+net.Receive("origines_set_covan", function(_, ply)
+    if not BLOOD.IsAdmin(ply) then
+        logAdmin("REFUS set_covan de " .. ply:Nick() .. " (" .. ply:SteamID64() .. ") — non autorisé")
+        return
+    end
+
+    local rawSid = net.ReadString()
+    local slot   = net.ReadUInt(8)
+    local amount = net.ReadInt(32)
+    local isAdd  = net.ReadBool()
+    local sid = BLOOD.NormalizeSteamID(rawSid)
+
+    if not sid then BLOOD.Notify(ply, "SteamID cible invalide.", "error") return end
+    if slot < 1 or slot > C.MaxSlots then BLOOD.Notify(ply, "Slot invalide.", "error") return end
+
+    -- Le slot doit exister
+    local target = BLOOD.GetPlayerBySteamID64(sid)
+    local exists
+    if IsValid(target) then
+        exists = target.BloodSlots and target.BloodSlots[slot] ~= nil
+    else
+        exists = BLOOD.SQL.GetSlot(sid, slot) ~= nil
+    end
+    if not exists then
+        BLOOD.Notify(ply, "Ce slot est vide.", "error")
+        return
+    end
+
+    local bal
+    if isAdd then
+        bal = BLOOD.AddCovanSlot(sid, slot, amount)
+    else
+        bal = BLOOD.SetCovanSlot(sid, slot, amount)
+    end
+
+    logAdmin(ply:Nick() .. " (" .. ply:SteamID64() .. ") a "
+        .. (isAdd and ("ajouté " .. amount) or ("défini à " .. amount))
+        .. " " .. BLOOD.Config.Currency .. " sur le slot " .. slot .. " de " .. sid
+        .. " (solde: " .. tostring(bal) .. ")")
+    BLOOD.Notify(ply, "Covan " .. (isAdd and "ajoutés" or "définis") .. " : "
+        .. sid .. " slot " .. slot .. " => " .. tostring(bal) .. ".", "info")
+end)

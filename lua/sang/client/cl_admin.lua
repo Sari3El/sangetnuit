@@ -179,4 +179,49 @@ function BLOOD.OpenAdminMenu(races)
         net.WriteBool(false)
         net.SendToServer()
     end
+
+    ------------------------------------------------------------------
+    -- 5) Argent (Covan)
+    ------------------------------------------------------------------
+    sectionLabel(body, "5)  Argent (" .. (BLOOD.Config.Currency or "Covan") .. ")  — par personnage")
+    local rowMoney = vgui.Create("DPanel", body)
+    rowMoney:Dock(TOP) rowMoney:DockMargin(0, S(2), S(6), S(4)) rowMoney:SetTall(S(26))
+    rowMoney.Paint = function() end
+
+    local slotCombo3 = vgui.Create("DComboBox", rowMoney)
+    slotCombo3:Dock(LEFT) slotCombo3:SetWide(S(150))
+    UI.SkinCombo(slotCombo3)
+    for i = 1, BLOOD.Config.MaxSlots do slotCombo3:AddChoice("Slot " .. i, i) end
+    slotCombo3:ChooseOptionID(1)
+
+    local covanEntry = vgui.Create("DTextEntry", rowMoney)
+    covanEntry:Dock(FILL) covanEntry:DockMargin(S(8), 0, 0, 0)
+    covanEntry:SetNumeric(true) covanEntry:SetText("0")
+    UI.SkinEntry(covanEntry)
+
+    local rowMoneyBtns = vgui.Create("DPanel", body)
+    rowMoneyBtns:Dock(TOP) rowMoneyBtns:DockMargin(0, 0, S(6), S(6)) rowMoneyBtns:SetTall(S(30))
+    rowMoneyBtns.Paint = function() end
+
+    local function sendCovan(isAdd)
+        local _, slot = slotCombo3:GetSelected()
+        net.Start("origines_set_covan")
+        net.WriteString(sidEntry:GetValue() or "")
+        net.WriteUInt(tonumber(slot) or 1, 8)
+        net.WriteInt(math.floor(tonumber(covanEntry:GetValue()) or 0), 32)
+        net.WriteBool(isAdd)
+        net.SendToServer()
+    end
+
+    local setMoney = vgui.Create("DButton", rowMoneyBtns)
+    setMoney:Dock(LEFT) setMoney:SetWide(S(240))
+    setMoney:SetText("Définir le montant")
+    UI.SkinButton(setMoney, "gold")
+    setMoney.DoClick = function() sendCovan(false) end
+
+    local addMoney = vgui.Create("DButton", rowMoneyBtns)
+    addMoney:Dock(FILL) addMoney:DockMargin(S(8), 0, 0, 0)
+    addMoney:SetText("Ajouter / retirer")
+    UI.SkinButton(addMoney, "default")
+    addMoney.DoClick = function() sendCovan(true) end
 end

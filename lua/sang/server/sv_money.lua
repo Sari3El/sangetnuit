@@ -56,6 +56,28 @@ function BLOOD.AddCovanSlot(sid64, slot, delta)
     return new
 end
 
+--- Définit un montant absolu de Covan sur un slot (marche hors-ligne).
+--  Renvoie le nouveau solde, ou nil si le slot n'existe pas.
+function BLOOD.SetCovanSlot(sid64, slot, amount)
+    sid64 = tostring(sid64)
+    slot = tonumber(slot)
+    amount = math.max(0, math.floor(tonumber(amount) or 0))
+
+    local ply = BLOOD.GetPlayerBySteamID64(sid64)
+    if IsValid(ply) and (ply.BloodActiveSlot or 1) == slot
+       and ply.BloodSlots and ply.BloodSlots[slot] then
+        return BLOOD.SetCovan(ply, amount)
+    end
+
+    if not BLOOD.SQL.GetSlot(sid64, slot) then return nil end
+    BLOOD.SQL.SetCovan(sid64, slot, amount)
+    if IsValid(ply) and ply.BloodSlots and ply.BloodSlots[slot] then
+        ply.BloodSlots[slot].covan = amount
+        if (ply.BloodActiveSlot or 1) == slot then ply:SetNWInt("blood_covan", amount) end
+    end
+    return amount
+end
+
 ----------------------------------------------------------------------
 -- Commande de test (admin) : donner des Covan
 --   sang_givecovan me <montant>

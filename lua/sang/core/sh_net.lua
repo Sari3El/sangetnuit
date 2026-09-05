@@ -22,4 +22,5 @@ if SERVER then
     util.AddNetworkString("origines_set_race")
     util.AddNetworkString("origines_rename_slot")
     util.AddNetworkString("origines_set_paid")
+    util.AddNetworkString("origines_set_covan")
 end
