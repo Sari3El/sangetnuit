@@ -34,7 +34,7 @@ end
 function BLOOD.OpenAdminMenu(races)
     if IsValid(BLOOD.AdminFrame) then BLOOD.AdminFrame:Remove() end
 
-    local f = UI.MakeFrame(S(560), S(600), "Sang et Nuit — Origines (Admin)")
+    local f = UI.MakeFrame(S(760), S(720), "Sang et Nuit — Origines (Admin)")
     BLOOD.AdminFrame = f
 
     -- Zone défilante

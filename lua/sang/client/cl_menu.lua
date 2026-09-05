@@ -156,7 +156,7 @@ function BLOOD.OpenMenu()
     net.Start("blood_request_sync") net.SendToServer()
     if IsValid(BLOOD.MenuFrame) then BLOOD.MenuFrame:Remove() end
 
-    BLOOD.MenuFrame = UI.MakeFrame(S(600), S(500), "Sang et Nuit — Personnages")
+    BLOOD.MenuFrame = UI.MakeFrame(S(820), S(660), "Sang et Nuit — Personnages")
     BLOOD.RefreshMenu()
 end
 

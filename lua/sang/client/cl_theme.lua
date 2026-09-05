@@ -242,11 +242,16 @@ function UI.MakeFrame(w, h, title)
         draw.SimpleText(title or "", "SangUI_Title", S(18),     hdr / 2 + 2,     C.goldLt, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
     end
 
+    -- Supprime les boutons réduire / agrandir (on ne garde que la croix)
+    if IsValid(f.btnMaxim) then f.btnMaxim:SetVisible(false) f.btnMaxim:SetMouseInputEnabled(false) end
+    if IsValid(f.btnMinim) then f.btnMinim:SetVisible(false) f.btnMinim:SetMouseInputEnabled(false) end
+
     -- bouton fermer reskiné
     if IsValid(f.btnClose) then
         f.btnClose:SetText("")
         f.btnClose:SetSize(hdr, hdr)
         f.btnClose:SetPos(w - hdr, 0)
+        f.btnClose:MoveToFront()
         f.btnClose.Paint = function(self, bw, bh)
             local c = self:IsHovered() and C.bloodLt or C.txtDim
             local m = math.floor(bw * 0.34)

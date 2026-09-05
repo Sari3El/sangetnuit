@@ -100,6 +100,16 @@ function SBANK.RefreshAdminPanel()
     sidEntry:Dock(TOP) sidEntry:DockMargin(0, 0, S(6), S(4)) sidEntry:SetTall(S(26))
     UI.SkinEntry(sidEntry)
 
+    -- Liste déroulante des joueurs connectés (comme le menu origines)
+    local plyCombo = vgui.Create("DComboBox", p)
+    plyCombo:Dock(TOP) plyCombo:DockMargin(0, 0, S(6), S(4)) plyCombo:SetTall(S(26))
+    plyCombo:SetValue("— Choisir un joueur connecté —")
+    UI.SkinCombo(plyCombo)
+    for _, pl in ipairs(player.GetAll()) do
+        plyCombo:AddChoice(pl:Nick() .. "  (" .. pl:SteamID() .. ")", pl:SteamID64())
+    end
+    plyCombo.OnSelect = function(_, _, _, data) sidEntry:SetText(data or "") end
+
     local prow = vgui.Create("DPanel", p)
     prow:Dock(TOP) prow:DockMargin(0, S(2), S(6), S(6)) prow:SetTall(S(28))
     prow.Paint = function() end
@@ -136,6 +146,6 @@ function SBANK.OpenAdminPanel()
     local UI = BLOOD.UI
     local S = UI.Scale
     if IsValid(SBANK.AdminFrame) then SBANK.AdminFrame:Remove() end
-    SBANK.AdminFrame = UI.MakeFrame(S(560), S(560), "Banque — Administration")
+    SBANK.AdminFrame = UI.MakeFrame(S(740), S(720), "Banque — Administration")
     SBANK.RefreshAdminPanel()
 end

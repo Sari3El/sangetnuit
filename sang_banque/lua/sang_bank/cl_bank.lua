@@ -108,18 +108,19 @@ function SBANK.OpenBankMenu()
     local S = UI.Scale
     if IsValid(SBANK.BankFrame) then SBANK.BankFrame:Remove() end
 
-    local f = UI.MakeFrame(S(520), S(340), "Banque")
+    local f = UI.MakeFrame(S(720), S(500), "Banque")
     SBANK.BankFrame = f
 
-    -- Bouton admin (haut-droite), visible seulement si le serveur l'autorise
+    -- Bouton admin (haut-droite, à gauche de la croix), visible si autorisé
     if SBANK.Data.isAdmin then
         local hdr = f.HeaderH or S(46)
-        local bw = S(150)
+        local bw = S(160)
         local ab = vgui.Create("DButton", f)
-        ab:SetSize(bw, hdr - S(14))
-        ab:SetPos(f:GetWide() - hdr - bw - S(4), S(7))
+        ab:SetSize(bw, hdr - S(16))
+        ab:SetPos(f:GetWide() - hdr - bw - S(8), S(8))
         ab:SetText("Administration")
         UI.SkinButton(ab, "gold")
+        ab:MoveToFront()
         ab.DoClick = function()
             if SBANK.OpenAdminPanel then SBANK.OpenAdminPanel() end
         end
