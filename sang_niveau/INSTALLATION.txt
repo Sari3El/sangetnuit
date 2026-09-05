@@ -1,0 +1,57 @@
+==========================================================================
+  SANG ET NUIT — NIVEAUX & COMPÉTENCES (addon séparé)
+==========================================================================
+
+Addon INDÉPENDANT. Il DÉPEND de "sang_et_nuit" (Covan, thème, hook des stats,
+menu personnages). Installe-les côte à côte dans addons/.
+
+--------------------------------------------------------------------------
+INSTALLATION
+--------------------------------------------------------------------------
+Copie "sang_niveau" dans ...\GarrysMod\garrysmod\addons\ , à côté des autres :
+   sang_et_nuit\  sang_nourriture\  sang_banque\  sang_niveau\
+
+IMPORTANT : remplace AUSSI "sang_et_nuit" par la version fournie en même temps
+(le menu Origines devient une page à onglets et le !perso passe en entité).
+
+--------------------------------------------------------------------------
+NIVEAUX & POINTS  (par personnage)
+--------------------------------------------------------------------------
+- HUD en haut de l'écran : niveau + barre d'XP + points disponibles.
+- XP passif : +X XP toutes les T s (config), avec le multiplicateur serveur.
+- Chaque niveau = 1 point. Niveau max = 250.
+- 4 stats : Force (+dégâts), Résistance (-dégâts subis), Agilité (+vitesse),
+  Vitalité (+PV max). Chaque point donne un % à rendements décroissants :
+  1→25 : +1%/pt · 26→75 : +0.5%/pt · 76→100 : +0.25%/pt (max 100 pts = +56.25%).
+  Le % s'applique par-dessus ta stat de base (race incluse).
+
+--------------------------------------------------------------------------
+ENTITÉS  (Q -> Entities -> "Sang et Nuit")
+--------------------------------------------------------------------------
+- "Borne de Compétences" (storagecloset) : E dessus -> dépenser tes points.
+- "Borne Personnages" (gaspump)          : E dessus -> menu personnages
+  (remplace l'ancien !perso, retiré du chat).
+
+--------------------------------------------------------------------------
+POINTS DE RESET (respec)
+--------------------------------------------------------------------------
+- Réinitialisent SEULEMENT les points de stats (pas le niveau).
+- Payants : donnés par le staff via Origines -> Gestion Joueurs -> Niveau.
+- Le joueur les utilise à la Borne de Compétences (bouton Réinitialiser).
+
+--------------------------------------------------------------------------
+MENU ORIGINES
+--------------------------------------------------------------------------
+Page d'accueil à deux boutons :
+  - Gestion Joueurs : (crédits, race, renommer, slot payant, Covan) +
+                      Niveau & compétences (régler le niveau, donner des
+                      points bonus, donner des points de reset).
+  - Gestion Serveur : Multiplicateur d'XP (0 = normal ×1 ; ex. 2 = ×2 ;
+                      décimales OK). Remis à 0 à chaque démarrage du serveur.
+
+--------------------------------------------------------------------------
+RÉGLAGES  (lua/sang_niveau/sh_config.lua)
+--------------------------------------------------------------------------
+  MaxLevel, XPBase/XPExp (courbe), XPPerTick/TickInterval (passif),
+  StatsModel/PersoModel, portées, définition des 4 stats.
+==========================================================================

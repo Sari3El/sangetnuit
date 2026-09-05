@@ -193,20 +193,12 @@ net.Receive("blood_request_sync", function(_, ply)
 end)
 
 ----------------------------------------------------------------------
--- Commandes chat : ouvrir le menu personnages (+ masquer du chat public)
+-- Ouverture du menu personnages (utilisé par l'entité perso « gaspump »).
+--   (Le chat !perso a été retiré : on ouvre désormais via l'entité.)
 ----------------------------------------------------------------------
-local playerMenuCmds = {
-    ["!perso"] = true, ["/perso"] = true,
-    ["!personnages"] = true, ["/personnages"] = true,
-    ["!races"] = true, ["/races"] = true,
-}
-
-hook.Add("PlayerSay", "BLOOD_PlayerMenuCmd", function(ply, text)
-    local cmd = string.lower(string.Trim(text))
-    if playerMenuCmds[cmd] then
-        BLOOD.SyncPlayer(ply)
-        net.Start("blood_open_menu")
-        net.Send(ply)
-        return ""
-    end
-end)
+function BLOOD.OpenCharacterMenu(ply)
+    if not IsValid(ply) or not ply:IsPlayer() then return end
+    BLOOD.SyncPlayer(ply)
+    net.Start("blood_open_menu")
+    net.Send(ply)
+end

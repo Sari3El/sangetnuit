@@ -89,6 +89,10 @@ function BLOOD.ApplyRaceStats(ply)
     ply:SetNWInt("blood_slot", ply.BloodActiveSlot or 1)
     if BLOOD.GetCovan then ply:SetNWInt("blood_covan", BLOOD.GetCovan(ply)) end
     if BLOOD.SyncHungerNW then BLOOD.SyncHungerNW(ply) end
+
+    -- Point d'extension : les autres addons (ex. niveaux) appliquent leurs
+    -- bonus de PV / vitesse par-dessus la race. Appelé à chaque application.
+    hook.Run("BLOOD_PostApplyStats", ply)
 end
 
 ----------------------------------------------------------------------
