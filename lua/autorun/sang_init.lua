@@ -32,6 +32,7 @@ local MODULES = {
     { "sang/server/sv_admin.lua",   "sv" },
 
     { "sang/client/cl_net.lua",   "cl" },
+    { "sang/client/cl_theme.lua", "cl" },
     { "sang/client/cl_menu.lua",  "cl" },
     { "sang/client/cl_admin.lua", "cl" },
     { "sang/client/cl_hud.lua",   "cl" },

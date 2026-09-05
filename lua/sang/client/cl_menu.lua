@@ -1,15 +1,17 @@
 --[[-------------------------------------------------------------------------
     Sang et Nuit — Menu joueur (personnages / reroll / retour Humain)
-    Ouvert via la commande chat !perso (ou console : sang_menu).
+    Ouvert via !perso (ou console : sang_menu). Style commun BLOOD.UI.
 ---------------------------------------------------------------------------]]
 
 BLOOD = BLOOD or {}
+local UI = BLOOD.UI
+local C = UI.Col
+local S = UI.Scale
 
 local function raceName(id)
     local r = BLOOD.Races and BLOOD.Races[id]
     return r and r.name or id
 end
-
 local function raceDesc(id)
     local r = BLOOD.Races and BLOOD.Races[id]
     return r and r.desc or ""
@@ -20,103 +22,104 @@ end
 ----------------------------------------------------------------------
 function BLOOD.RefreshMenu()
     local f = BLOOD.MenuFrame
-    if not IsValid(f) or not IsValid(f.Content) then return end
+    if not IsValid(f) or not IsValid(f.Body) then return end
 
-    local C = BLOOD.Config
+    local body = f.Body
+    body:Clear()
     local d = BLOOD.MyData
-    local content = f.Content
-    content:Clear()
+    local cfg = BLOOD.Config
+    local bw = body:GetWide()
 
-    -- En-tête : crédits
-    local head = vgui.Create("DLabel", content)
+    -- Bandeau crédits
+    local head = vgui.Create("DPanel", body)
     head:Dock(TOP)
-    head:DockMargin(10, 10, 10, 4)
-    head:SetFont("DermaLarge")
-    head:SetText("Crédits de reroll : " .. (d.credits or 0))
-    head:SizeToContents()
+    head:DockMargin(0, 0, 0, S(8))
+    head:SetTall(S(40))
+    head.Paint = function(_, w, h)
+        UI.VGradient(0, 0, w, h, UI.Shade(C.bg2, 6), C.bg1)
+        surface.SetDrawColor(C.goldDk); surface.DrawOutlinedRect(0, 0, w, h, 1)
+        draw.SimpleText("Crédits de reroll", "SangUI_Body", S(12), h / 2, C.txtDim, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText(tostring(d.credits or 0), "SangUI_H1", w - S(14), h / 2, C.goldLt, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+    end
 
-    -- Bloc bas (reroll / humain) docké en premier pour rester en bas
-    local bottom = vgui.Create("DPanel", content)
+    -- Bloc bas : reroll / retour humain
+    local bottom = vgui.Create("DPanel", body)
     bottom:Dock(BOTTOM)
-    bottom:DockMargin(10, 6, 10, 10)
-    bottom:SetTall(78)
-    bottom.Paint = function() end
+    bottom:DockMargin(0, S(8), 0, 0)
+    bottom:SetTall(S(84))
+    bottom.Paint = function(_, w, h)
+        surface.SetDrawColor(C.goldDk); surface.DrawRect(0, 0, w, 1)
+        local active = d.slots[d.activeSlot]
+        local txt = active and (active.name .. "  —  " .. raceName(active.race)) or "aucun perso actif"
+        draw.SimpleText("Perso actif : " .. txt, "SangUI_Small", 0, S(6), C.txtDim, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+    end
 
-    local active = d.slots[d.activeSlot]
-    local info = vgui.Create("DLabel", bottom)
-    info:Dock(TOP)
-    info:SetText("Perso actif : " .. (active
-        and (active.name .. " — " .. raceName(active.race) .. "  (" .. raceDesc(active.race) .. ")")
-        or "aucun"))
-    info:SizeToContents()
-
-    local btnRow = vgui.Create("DPanel", bottom)
-    btnRow:Dock(FILL)
-    btnRow:DockMargin(0, 6, 0, 0)
-    btnRow.Paint = function() end
-
-    local reroll = vgui.Create("DButton", btnRow)
+    local reroll = vgui.Create("DButton", bottom)
     reroll:Dock(LEFT)
-    reroll:DockMargin(0, 0, 4, 0)
-    reroll:SetWide(255)
-    reroll:SetText("Reroll (" .. C.RerollCost .. " crédit" .. (C.RerollCost > 1 and "s" or "") .. ")")
-    reroll.DoClick = function()
-        net.Start("blood_reroll") net.SendToServer()
-    end
+    reroll:DockMargin(0, S(28), S(6), S(4))
+    reroll:SetWide(S(240))
+    reroll:SetText("Reroll  (" .. cfg.RerollCost .. " crédit" .. (cfg.RerollCost > 1 and "s" or "") .. ")")
+    UI.SkinButton(reroll, "blood")
+    reroll.DoClick = function() net.Start("blood_reroll") net.SendToServer() end
 
-    local human = vgui.Create("DButton", btnRow)
+    local human = vgui.Create("DButton", bottom)
     human:Dock(FILL)
-    human:DockMargin(4, 0, 0, 0)
-    human:SetText("Retour Humain (gratuit)")
-    human.DoClick = function()
-        net.Start("blood_return_human") net.SendToServer()
-    end
+    human:DockMargin(S(6), S(28), 0, S(4))
+    human:SetText("Retour Humain  (gratuit)")
+    UI.SkinButton(human, "default")
+    human.DoClick = function() net.Start("blood_return_human") net.SendToServer() end
 
     -- Liste des slots
-    for i = 1, C.MaxSlots do
+    for i = 1, cfg.MaxSlots do
         local slot   = d.slots[i]
-        local isPaid = i > C.FreeSlots
+        local isPaid = i > cfg.FreeSlots
         local locked = isPaid and not d.paidUnlocked
+        local active = (i == d.activeSlot)
 
-        local row = vgui.Create("DPanel", content)
+        local row = vgui.Create("DPanel", body)
         row:Dock(TOP)
-        row:DockMargin(10, 4, 10, 0)
-        row:SetTall(58)
+        row:DockMargin(0, 0, 0, S(6))
+        row:SetTall(S(58))
         row.Paint = function(_, w, h)
-            local col = (i == d.activeSlot) and Color(40, 70, 40) or Color(45, 45, 45)
-            draw.RoundedBox(6, 0, 0, w, h, col)
-        end
+            UI.VGradient(0, 0, w, h, active and UI.Shade(C.bg3, 4) or C.bg2, C.bg0)
+            surface.SetDrawColor(active and C.gold or C.goldDk)
+            surface.DrawOutlinedRect(0, 0, w, h, 1)
+            -- liseré rouge à gauche pour le slot actif
+            if active then surface.SetDrawColor(C.blood); surface.DrawRect(0, 0, S(3), h) end
 
-        local lbl = vgui.Create("DLabel", row)
-        lbl:Dock(LEFT)
-        lbl:DockMargin(12, 0, 0, 0)
-        lbl:SetWide(300)
-        lbl:SetContentAlignment(4)
-        if slot then
-            lbl:SetText("Slot " .. i .. (isPaid and " (payant)" or "") .. " — " .. slot.name
-                .. "\nRace : " .. raceName(slot.race) .. (i == d.activeSlot and "   [ACTIF]" or ""))
-        elseif locked then
-            lbl:SetText("Slot " .. i .. " — PAYANT (verrouillé)")
-        else
-            lbl:SetText("Slot " .. i .. (isPaid and " (payant)" or "") .. " — vide")
+            local title
+            if slot then
+                title = "Slot " .. i .. (isPaid and "  (payant)" or "") .. "  —  " .. slot.name
+            elseif locked then
+                title = "Slot " .. i .. "  —  PAYANT (verrouillé)"
+            else
+                title = "Slot " .. i .. (isPaid and "  (payant)" or "") .. "  —  vide"
+            end
+            draw.SimpleText(title, "SangUI_Body", S(12), S(12), active and C.goldLt or C.txt, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+            if slot then
+                draw.SimpleText("Race : " .. raceName(slot.race) .. (active and "     ● ACTIF" or ""),
+                    "SangUI_Small", S(12), S(33), C.txtDim, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+            end
         end
 
         if slot then
             local play = vgui.Create("DButton", row)
             play:Dock(RIGHT)
-            play:DockMargin(4, 11, 12, 11)
-            play:SetWide(96)
-            play:SetText(i == d.activeSlot and "Actif" or "Jouer")
-            play:SetEnabled(i ~= d.activeSlot)
+            play:DockMargin(S(6), S(12), S(12), S(12))
+            play:SetWide(S(96))
+            play:SetText(active and "Actif" or "Jouer")
+            play:SetEnabled(not active)
+            UI.SkinButton(play, active and "default" or "gold")
             play.DoClick = function()
                 net.Start("blood_select_slot") net.WriteUInt(i, 8) net.SendToServer()
             end
         elseif not locked then
             local create = vgui.Create("DButton", row)
             create:Dock(RIGHT)
-            create:DockMargin(4, 11, 12, 11)
-            create:SetWide(96)
+            create:DockMargin(S(6), S(12), S(12), S(12))
+            create:SetWide(S(96))
             create:SetText("Créer")
+            UI.SkinButton(create, "gold")
             create.DoClick = function()
                 Derma_StringRequest("Nouveau personnage", "Nom du personnage :",
                     "Personnage " .. i,
@@ -132,23 +135,12 @@ function BLOOD.RefreshMenu()
 end
 
 ----------------------------------------------------------------------
--- Ouvre le menu (demande une synchro fraîche au serveur)
+-- Ouvre le menu
 ----------------------------------------------------------------------
 function BLOOD.OpenMenu()
     net.Start("blood_request_sync") net.SendToServer()
-
     if IsValid(BLOOD.MenuFrame) then BLOOD.MenuFrame:Remove() end
 
-    local f = vgui.Create("DFrame")
-    BLOOD.MenuFrame = f
-    f:SetSize(600, 470)
-    f:Center()
-    f:SetTitle("Sang et Nuit — Personnages")
-    f:MakePopup()
-
-    f.Content = vgui.Create("DPanel", f)
-    f.Content:Dock(FILL)
-    f.Content.Paint = function() end
-
+    BLOOD.MenuFrame = UI.MakeFrame(S(600), S(500), "Sang et Nuit — Personnages")
     BLOOD.RefreshMenu()
 end
