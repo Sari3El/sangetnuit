@@ -146,8 +146,9 @@ hook.Add("HUDPaint", "BLOOD_HUD", function()
     -- Nom
     draw.SimpleText(persoName, "SangUI_Title", bx + 1, y + pad + 1, C.shadow, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
     draw.SimpleText(persoName, "SangUI_Title", bx,     y + pad,     C.txt,    TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
-    -- Race (gauche) + Covan (droite)
-    draw.SimpleText(raceData and raceData.name or raceId, "SangUI_Small",
+    -- Race (gauche, nom court) + Covan (droite)
+    local raceLabel = raceData and (raceData.short or raceData.name) or raceId
+    draw.SimpleText(raceLabel, "SangUI_Small",
         bx, y + pad + S(26), C.goldLt, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
     local covanTxt = string.Comma(covan) .. " " .. (BLOOD.Config.Currency or "Covan")
     draw.SimpleText(covanTxt, "SangUI_Bar", bx + bw + 1, y + pad + S(27), C.shadow, TEXT_ALIGN_RIGHT, TEXT_ALIGN_TOP)
