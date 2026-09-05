@@ -226,7 +226,7 @@ C.Races = {
         desc = "Sang noble « pur ». Bonus équilibré + régén légère. Le premium safe.",
     },
     {
-        id = "hommeaigle", name = "Descendant de l'Aviateur", rarity = "Rare-ish",
+        id = "hommeaigle", name = "Descendant du Ciel", rarity = "Rare-ish",
         min = 9541, max = 9840,
         hp = 0.8, speed = 1.15, dmgReduction = 0.0,
         weapons = { "sang_swep_vol" }, -- SWEP « Vol » (hors périmètre — à créer)
