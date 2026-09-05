@@ -29,24 +29,29 @@ function BLOOD.SQL.Init()
         paid_unlocked INTEGER NOT NULL DEFAULT 0
     );]])
 
-    sql.Query([[CREATE TABLE IF NOT EXISTS blood_slots (
-        steamid64 TEXT NOT NULL,
-        slot      INTEGER NOT NULL,
-        name      TEXT,
-        race      TEXT NOT NULL DEFAULT 'human',
-        covan     INTEGER NOT NULL DEFAULT 0,
-        created   INTEGER,
-        PRIMARY KEY (steamid64, slot)
-    );]])
+    local defHunger = math.max(1, math.floor(BLOOD.Config.HungerMax or 100))
 
-    -- Migration : ajoute la colonne covan aux bases existantes.
+    sql.Query("CREATE TABLE IF NOT EXISTS blood_slots ("
+        .. "steamid64 TEXT NOT NULL,"
+        .. "slot INTEGER NOT NULL,"
+        .. "name TEXT,"
+        .. "race TEXT NOT NULL DEFAULT 'human',"
+        .. "covan INTEGER NOT NULL DEFAULT 0,"
+        .. "hunger INTEGER NOT NULL DEFAULT " .. defHunger .. ","
+        .. "created INTEGER,"
+        .. "PRIMARY KEY (steamid64, slot));")
+
+    -- Migrations (bases existantes)
     local cols = sql.Query("PRAGMA table_info(blood_slots);")
-    local hasCovan = false
+    local has = {}
     if istable(cols) then
-        for _, c in ipairs(cols) do if c.name == "covan" then hasCovan = true break end end
+        for _, c in ipairs(cols) do has[c.name] = true end
     end
-    if not hasCovan then
+    if not has.covan then
         sql.Query("ALTER TABLE blood_slots ADD COLUMN covan INTEGER NOT NULL DEFAULT 0;")
+    end
+    if not has.hunger then
+        sql.Query("ALTER TABLE blood_slots ADD COLUMN hunger INTEGER NOT NULL DEFAULT " .. defHunger .. ";")
     end
 end
 
@@ -133,26 +138,46 @@ end
 -- Slots de personnage (nom + race)
 ----------------------------------------------------------------------
 
---- Retourne { [slot] = { name=, race=, covan= } } pour un joueur.
+--- Retourne { [slot] = { name=, race=, covan=, hunger= } } pour un joueur.
 function BLOOD.SQL.GetSlots(sid64)
-    local rows = sql.Query("SELECT slot, name, race, covan FROM blood_slots WHERE steamid64 = " .. E(sid64) .. " ORDER BY slot;")
+    local rows = sql.Query("SELECT slot, name, race, covan, hunger FROM blood_slots WHERE steamid64 = " .. E(sid64) .. " ORDER BY slot;")
     local out = {}
     if istable(rows) then
         for _, row in ipairs(rows) do
-            out[tonumber(row.slot)] = { name = row.name, race = row.race, covan = tonumber(row.covan) or 0 }
+            out[tonumber(row.slot)] = {
+                name = row.name, race = row.race,
+                covan = tonumber(row.covan) or 0,
+                hunger = tonumber(row.hunger) or BLOOD.Config.HungerMax,
+            }
         end
     end
     return out
 end
 
---- Retourne { name=, race=, covan= } d'un slot précis, ou nil.
+--- Retourne { name=, race=, covan=, hunger= } d'un slot précis, ou nil.
 function BLOOD.SQL.GetSlot(sid64, slot)
-    local rows = sql.Query("SELECT name, race, covan FROM blood_slots WHERE steamid64 = " .. E(sid64)
+    local rows = sql.Query("SELECT name, race, covan, hunger FROM blood_slots WHERE steamid64 = " .. E(sid64)
         .. " AND slot = " .. N(slot) .. ";")
     if istable(rows) and rows[1] then
-        return { name = rows[1].name, race = rows[1].race, covan = tonumber(rows[1].covan) or 0 }
+        return {
+            name = rows[1].name, race = rows[1].race,
+            covan = tonumber(rows[1].covan) or 0,
+            hunger = tonumber(rows[1].hunger) or BLOOD.Config.HungerMax,
+        }
     end
     return nil
+end
+
+--- Faim d'un slot (SQL).
+function BLOOD.SQL.GetHunger(sid64, slot)
+    local v = sql.QueryValue("SELECT hunger FROM blood_slots WHERE steamid64 = " .. E(sid64)
+        .. " AND slot = " .. N(slot) .. ";")
+    return tonumber(v) or BLOOD.Config.HungerMax
+end
+
+function BLOOD.SQL.SetHunger(sid64, slot, value)
+    sql.Query("UPDATE blood_slots SET hunger = " .. math.max(0, N(value)) .. " WHERE steamid64 = " .. E(sid64)
+        .. " AND slot = " .. N(slot) .. ";")
 end
 
 --- Covan d'un slot (SQL, offline-safe).
@@ -171,9 +196,11 @@ end
 function BLOOD.SQL.CreateSlot(sid64, slot, name, race)
     race = BLOOD.RaceExists(race) and race or "human"
     name = tostring(name or ("Personnage " .. N(slot)))
-    local startCovan = math.max(0, math.floor(BLOOD.Config.StartingCovan or 0))
-    sql.Query("INSERT OR REPLACE INTO blood_slots (steamid64, slot, name, race, covan, created) VALUES ("
-        .. E(sid64) .. ", " .. N(slot) .. ", " .. E(name) .. ", " .. E(race) .. ", " .. startCovan .. ", " .. os.time() .. ");")
+    local startCovan  = math.max(0, math.floor(BLOOD.Config.StartingCovan or 0))
+    local startHunger = math.max(1, math.floor(BLOOD.Config.HungerMax or 100))
+    sql.Query("INSERT OR REPLACE INTO blood_slots (steamid64, slot, name, race, covan, hunger, created) VALUES ("
+        .. E(sid64) .. ", " .. N(slot) .. ", " .. E(name) .. ", " .. E(race) .. ", "
+        .. startCovan .. ", " .. startHunger .. ", " .. os.time() .. ");")
 end
 
 --- Change uniquement la race d'un slot existant.

@@ -167,7 +167,11 @@ net.Receive("blood_create_slot", function(_, ply)
 
     BLOOD.SQL.CreateSlot(ply:SteamID64(), slot, name, "human")
     ply.BloodSlots = ply.BloodSlots or {}
-    ply.BloodSlots[slot] = { name = name, race = "human" }
+    ply.BloodSlots[slot] = {
+        name = name, race = "human",
+        covan = math.max(0, math.floor(BLOOD.Config.StartingCovan or 0)),
+        hunger = BLOOD.Config.HungerMax,
+    }
 
     if not hadChar then
         -- Premier personnage : devient actif, on déverrouille et on (re)spawn.

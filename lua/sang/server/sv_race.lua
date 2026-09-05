@@ -88,6 +88,7 @@ function BLOOD.ApplyRaceStats(ply)
     ply:SetNWString("blood_race", race.id)
     ply:SetNWInt("blood_slot", ply.BloodActiveSlot or 1)
     if BLOOD.GetCovan then ply:SetNWInt("blood_covan", BLOOD.GetCovan(ply)) end
+    if BLOOD.SyncHungerNW then BLOOD.SyncHungerNW(ply) end
 end
 
 ----------------------------------------------------------------------
