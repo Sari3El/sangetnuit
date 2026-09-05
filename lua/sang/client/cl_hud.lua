@@ -91,16 +91,27 @@ hook.Add("HUDPaint", "BLOOD_HUD", function()
         return
     end
 
-    -- Layout (coin bas-gauche)
-    local pad = S(14)
-    local w   = S(366)
-    local h   = S(150)
-    local x   = S(24)
-    local y   = ScrH() - h - S(24)
+    -- Race active (détermine le nombre de barres)
+    local raceId   = ply:GetNWString("blood_race", "human")
+    local raceData = BLOOD.Races and BLOOD.Races[raceId]
+    local slotData = BLOOD.MyData and BLOOD.MyData.slots and BLOOD.MyData.slots[BLOOD.MyData.activeSlot]
+    local persoName = (slotData and slotData.name) or ply:Nick()
+    local isSorcier = (raceId == "sorcier")
+    local nBars = isSorcier and 3 or 2
+
+    -- Layout (coin bas-gauche), hauteur adaptée au nombre de barres
+    local pad  = S(14)
+    local barH = S(22)
+    local gap  = S(8)
+    local topH = S(54) -- nom + race + filet
+    local w    = S(366)
+    local h    = pad + topH + (nBars * barH + (nBars - 1) * gap) + pad
+    local x    = S(24)
+    local y    = ScrH() - h - S(24)
 
     UI.Panel(x, y, w, h)
 
-    -- Zone du model
+    -- Model (à gauche, pleine hauteur)
     local mW = S(98)
     local mH = h - pad * 2
     local mX = x + pad
@@ -116,28 +127,18 @@ hook.Add("HUDPaint", "BLOOD_HUD", function()
     mdl:SetPos(mX, mY)
     mdl:SetSize(mW, mH)
 
-    -- Zone de droite
+    -- Colonne de droite
     local bx = mX + mW + S(14)
     local bw = (x + w - pad) - bx
-
-    -- Nom du perso + race
-    local raceId   = ply:GetNWString("blood_race", "human")
-    local raceData = BLOOD.Races and BLOOD.Races[raceId]
-    local slotData = BLOOD.MyData and BLOOD.MyData.slots and BLOOD.MyData.slots[BLOOD.MyData.activeSlot]
-    local persoName = (slotData and slotData.name) or ply:Nick()
 
     draw.SimpleText(persoName, "SangUI_Title", bx + 1, y + pad + 1, C.shadow, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
     draw.SimpleText(persoName, "SangUI_Title", bx,     y + pad,     C.txt,    TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
     draw.SimpleText(raceData and raceData.name or raceId, "SangUI_Small",
         bx, y + pad + S(26), C.goldLt, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
-    -- filet doré sous le nom
     surface.SetDrawColor(C.goldDk)
     surface.DrawRect(bx, y + pad + S(46), bw, 1)
 
-    -- Barres
-    local barH = S(22)
-    local gap  = S(8)
-    local by   = y + pad + S(54)
+    local by = y + pad + topH
 
     -- PV
     local hp, hpMax = ply:Health(), math.max(1, ply:GetMaxHealth())
@@ -151,8 +152,8 @@ hook.Add("HUDPaint", "BLOOD_HUD", function()
     UI.Bar(bx, by, bw, barH, anim.armor, C.steel, C.steelLt, "Armure", ar .. " / " .. arMax)
     by = by + barH + gap
 
-    -- Mana (uniquement Sorcier)
-    if raceId == "sorcier" then
+    -- Mana (Sorcier uniquement)
+    if isSorcier then
         local manaMax = ply:GetNWInt("blood_mana_max", 0)
         local manaCur
         if manaMax <= 0 then

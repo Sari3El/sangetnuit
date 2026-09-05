@@ -121,6 +121,21 @@ function BLOOD.SetRace(ply, slot, raceId)
 end
 
 ----------------------------------------------------------------------
+-- Renommer un slot (joueur EN LIGNE) : SQL + cache + synchro
+----------------------------------------------------------------------
+function BLOOD.SetSlotName(ply, slot, name)
+    if not IsValid(ply) then return end
+    slot = tonumber(slot)
+    name = tostring(name)
+    if not (ply.BloodSlots and ply.BloodSlots[slot]) then return false end
+
+    BLOOD.SQL.SetSlotName(ply:SteamID64(), slot, name)
+    ply.BloodSlots[slot].name = name
+    if BLOOD.SyncPlayer then BLOOD.SyncPlayer(ply) end
+    return true
+end
+
+----------------------------------------------------------------------
 -- Définir la race d'un slot (joueur HORS-LIGNE, écriture SQL directe)
 ----------------------------------------------------------------------
 function BLOOD.SetRaceOffline(sid64, slot, raceId)

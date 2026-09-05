@@ -20,4 +20,6 @@ if SERVER then
     -- Admin (Client -> Serveur, tout re-vérifié serveur-side)
     util.AddNetworkString("origines_give_credits")
     util.AddNetworkString("origines_set_race")
+    util.AddNetworkString("origines_rename_slot")
+    util.AddNetworkString("origines_set_paid")
 end

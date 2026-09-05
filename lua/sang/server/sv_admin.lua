@@ -122,3 +122,64 @@ net.Receive("origines_set_race", function(_, ply)
         .. "' sur le slot " .. slot .. " de " .. sid)
     BLOOD.Notify(ply, "Race définie : " .. sid .. " slot " .. slot .. " => " .. raceId .. ".", "info")
 end)
+
+----------------------------------------------------------------------
+-- Action : renommer un slot (marche hors-ligne ; slot existant uniquement)
+----------------------------------------------------------------------
+net.Receive("origines_rename_slot", function(_, ply)
+    if not BLOOD.IsAdmin(ply) then
+        logAdmin("REFUS rename_slot de " .. ply:Nick() .. " (" .. ply:SteamID64() .. ") — non autorisé")
+        return
+    end
+
+    local rawSid = net.ReadString()
+    local slot   = net.ReadUInt(8)
+    local name   = string.Trim(string.sub(net.ReadString() or "", 1, 32))
+    local sid = BLOOD.NormalizeSteamID(rawSid)
+
+    if not sid then BLOOD.Notify(ply, "SteamID cible invalide.", "error") return end
+    if slot < 1 or slot > C.MaxSlots then BLOOD.Notify(ply, "Slot invalide.", "error") return end
+    if string.len(name) < 2 then BLOOD.Notify(ply, "Nom trop court (2 caractères min).", "error") return end
+
+    local target = BLOOD.GetPlayerBySteamID64(sid)
+    local ok
+    if IsValid(target) then
+        ok = BLOOD.SetSlotName(target, slot, name)
+    else
+        if BLOOD.SQL.GetSlot(sid, slot) then
+            BLOOD.SQL.SetSlotName(sid, slot, name)
+            ok = true
+        end
+    end
+
+    if not ok then
+        BLOOD.Notify(ply, "Ce slot est vide (rien à renommer).", "error")
+        return
+    end
+
+    logAdmin(ply:Nick() .. " (" .. ply:SteamID64() .. ") a renommé le slot " .. slot
+        .. " de " .. sid .. " en « " .. name .. " »")
+    BLOOD.Notify(ply, "Slot renommé : " .. sid .. " slot " .. slot .. " => « " .. name .. " ».", "info")
+end)
+
+----------------------------------------------------------------------
+-- Action : débloquer / verrouiller le slot payant (marche hors-ligne)
+----------------------------------------------------------------------
+net.Receive("origines_set_paid", function(_, ply)
+    if not BLOOD.IsAdmin(ply) then
+        logAdmin("REFUS set_paid de " .. ply:Nick() .. " (" .. ply:SteamID64() .. ") — non autorisé")
+        return
+    end
+
+    local rawSid   = net.ReadString()
+    local unlocked = net.ReadBool()
+    local sid = BLOOD.NormalizeSteamID(rawSid)
+
+    if not sid then BLOOD.Notify(ply, "SteamID cible invalide.", "error") return end
+
+    BLOOD.SetPaidSlotUnlocked(sid, unlocked)
+    logAdmin(ply:Nick() .. " (" .. ply:SteamID64() .. ") a "
+        .. (unlocked and "débloqué" or "verrouillé") .. " le slot payant de " .. sid)
+    BLOOD.Notify(ply, "Slot payant " .. (unlocked and "débloqué" or "verrouillé")
+        .. " pour " .. sid .. ".", "info")
+end)

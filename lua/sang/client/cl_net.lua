@@ -6,6 +6,7 @@ BLOOD = BLOOD or {}
 
 -- État local du joueur (rempli par blood_sync)
 BLOOD.MyData = BLOOD.MyData or {
+    mustCreate = false,
     credits = 0,
     activeSlot = 1,
     paidUnlocked = false,
@@ -17,6 +18,7 @@ BLOOD.MyData = BLOOD.MyData or {
 ----------------------------------------------------------------------
 net.Receive("blood_sync", function()
     local d = { slots = {} }
+    d.mustCreate   = net.ReadBool()
     d.credits      = net.ReadUInt(32)
     d.activeSlot   = net.ReadUInt(8)
     d.paidUnlocked = net.ReadBool()

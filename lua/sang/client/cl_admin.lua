@@ -4,6 +4,9 @@
     RAPPEL : cette interface n'est qu'un confort. La vraie barrière de sécurité
     est SERVEUR-SIDE (chaque net message est re-vérifié contre la whitelist).
     Le serveur n'envoie "blood_open_admin" qu'aux joueurs autorisés.
+
+    Actions : donner des crédits, définir une race, renommer un slot,
+    débloquer/verrouiller le slot payant.
 ---------------------------------------------------------------------------]]
 
 BLOOD = BLOOD or {}
@@ -11,12 +14,9 @@ local UI = BLOOD.UI
 local C = UI.Col
 local S = UI.Scale
 
--- Petit label stylé
 local function sectionLabel(parent, text)
     local l = vgui.Create("DPanel", parent)
-    l:Dock(TOP)
-    l:DockMargin(0, S(6), 0, S(4))
-    l:SetTall(S(24))
+    l:Dock(TOP) l:DockMargin(0, S(8), S(6), S(4)) l:SetTall(S(24))
     l.Paint = function(_, w, h)
         draw.SimpleText(text, "SangUI_Body", 0, h / 2, C.goldLt, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
         surface.SetDrawColor(C.goldDk); surface.DrawRect(0, h - 1, w, 1)
@@ -26,29 +26,36 @@ end
 
 local function fieldLabel(parent, text)
     local l = vgui.Create("DLabel", parent)
-    l:Dock(TOP)
-    l:DockMargin(0, S(4), 0, S(2))
-    l:SetFont("SangUI_Small")
-    l:SetTextColor(C.txtDim)
-    l:SetText(text)
+    l:Dock(TOP) l:DockMargin(0, S(4), 0, S(2))
+    l:SetFont("SangUI_Small") l:SetTextColor(C.txtDim) l:SetText(text)
     return l
 end
 
 function BLOOD.OpenAdminMenu(races)
     if IsValid(BLOOD.AdminFrame) then BLOOD.AdminFrame:Remove() end
 
-    local f = UI.MakeFrame(S(560), S(430), "Sang et Nuit — Origines (Admin)")
+    local f = UI.MakeFrame(S(560), S(600), "Sang et Nuit — Origines (Admin)")
     BLOOD.AdminFrame = f
-    local body = f.Body
 
-    -- Cible SteamID
+    -- Zone défilante
+    local scroll = vgui.Create("DScrollPanel", f.Body)
+    scroll:Dock(FILL)
+    local sbar = scroll:GetVBar()
+    sbar:SetWide(S(8))
+    sbar.Paint = function() end
+    sbar.btnUp.Paint = function() end
+    sbar.btnDown.Paint = function() end
+    sbar.btnGrip.Paint = function(_, w, h) surface.SetDrawColor(C.goldDk); surface.DrawRect(0, 0, w, h) end
+    local body = scroll
+
+    -- Cible SteamID (commune à toutes les actions)
     fieldLabel(body, "SteamID cible (STEAM_0:... ou 7656...) :")
     local sidEntry = vgui.Create("DTextEntry", body)
-    sidEntry:Dock(TOP) sidEntry:DockMargin(0, 0, 0, S(4)) sidEntry:SetTall(S(26))
+    sidEntry:Dock(TOP) sidEntry:DockMargin(0, 0, S(6), S(4)) sidEntry:SetTall(S(26))
     UI.SkinEntry(sidEntry)
 
     local combo = vgui.Create("DComboBox", body)
-    combo:Dock(TOP) combo:DockMargin(0, 0, 0, S(8)) combo:SetTall(S(26))
+    combo:Dock(TOP) combo:DockMargin(0, 0, S(6), S(4)) combo:SetTall(S(26))
     combo:SetValue("— Choisir un joueur connecté —")
     UI.SkinCombo(combo)
     for _, p in ipairs(player.GetAll()) do
@@ -56,16 +63,18 @@ function BLOOD.OpenAdminMenu(races)
     end
     combo.OnSelect = function(_, _, _, data) sidEntry:SetText(data or "") end
 
+    ------------------------------------------------------------------
     -- 1) Crédits
+    ------------------------------------------------------------------
     sectionLabel(body, "1)  Donner des crédits de reroll")
     fieldLabel(body, "Nombre de crédits :")
     local amount = vgui.Create("DTextEntry", body)
-    amount:Dock(TOP) amount:DockMargin(0, 0, 0, S(4)) amount:SetTall(S(26))
+    amount:Dock(TOP) amount:DockMargin(0, 0, S(6), S(4)) amount:SetTall(S(26))
     amount:SetNumeric(true) amount:SetText("1")
     UI.SkinEntry(amount)
 
     local giveBtn = vgui.Create("DButton", body)
-    giveBtn:Dock(TOP) giveBtn:DockMargin(0, 0, 0, S(10)) giveBtn:SetTall(S(30))
+    giveBtn:Dock(TOP) giveBtn:DockMargin(0, 0, S(6), S(4)) giveBtn:SetTall(S(30))
     giveBtn:SetText("Donner les crédits")
     UI.SkinButton(giveBtn, "gold")
     giveBtn.DoClick = function()
@@ -75,27 +84,28 @@ function BLOOD.OpenAdminMenu(races)
         net.SendToServer()
     end
 
+    ------------------------------------------------------------------
     -- 2) Définir une race
+    ------------------------------------------------------------------
     sectionLabel(body, "2)  Définir une race sur un slot  (contourne tirage + paiement)")
+    local rowRace = vgui.Create("DPanel", body)
+    rowRace:Dock(TOP) rowRace:DockMargin(0, S(2), S(6), S(4)) rowRace:SetTall(S(26))
+    rowRace.Paint = function() end
 
-    local rowsel = vgui.Create("DPanel", body)
-    rowsel:Dock(TOP) rowsel:DockMargin(0, S(2), 0, S(8)) rowsel:SetTall(S(26))
-    rowsel.Paint = function() end
-
-    local slotCombo = vgui.Create("DComboBox", rowsel)
+    local slotCombo = vgui.Create("DComboBox", rowRace)
     slotCombo:Dock(LEFT) slotCombo:SetWide(S(150))
     UI.SkinCombo(slotCombo)
     for i = 1, BLOOD.Config.MaxSlots do slotCombo:AddChoice("Slot " .. i, i) end
     slotCombo:ChooseOptionID(1)
 
-    local raceCombo = vgui.Create("DComboBox", rowsel)
+    local raceCombo = vgui.Create("DComboBox", rowRace)
     raceCombo:Dock(FILL) raceCombo:DockMargin(S(8), 0, 0, 0)
     UI.SkinCombo(raceCombo)
     for _, r in ipairs(races or {}) do raceCombo:AddChoice(r.name, r.id) end
     raceCombo:ChooseOptionID(1)
 
     local setBtn = vgui.Create("DButton", body)
-    setBtn:Dock(TOP) setBtn:DockMargin(0, 0, 0, S(4)) setBtn:SetTall(S(30))
+    setBtn:Dock(TOP) setBtn:DockMargin(0, 0, S(6), S(4)) setBtn:SetTall(S(30))
     setBtn:SetText("Définir la race")
     UI.SkinButton(setBtn, "blood")
     setBtn.DoClick = function()
@@ -105,6 +115,68 @@ function BLOOD.OpenAdminMenu(races)
         net.WriteString(sidEntry:GetValue() or "")
         net.WriteUInt(tonumber(slot) or 1, 8)
         net.WriteString(raceId or "human")
+        net.SendToServer()
+    end
+
+    ------------------------------------------------------------------
+    -- 3) Renommer un slot
+    ------------------------------------------------------------------
+    sectionLabel(body, "3)  Renommer un slot")
+    local rowRen = vgui.Create("DPanel", body)
+    rowRen:Dock(TOP) rowRen:DockMargin(0, S(2), S(6), S(4)) rowRen:SetTall(S(26))
+    rowRen.Paint = function() end
+
+    local slotCombo2 = vgui.Create("DComboBox", rowRen)
+    slotCombo2:Dock(LEFT) slotCombo2:SetWide(S(150))
+    UI.SkinCombo(slotCombo2)
+    for i = 1, BLOOD.Config.MaxSlots do slotCombo2:AddChoice("Slot " .. i, i) end
+    slotCombo2:ChooseOptionID(1)
+
+    local nameEntry = vgui.Create("DTextEntry", rowRen)
+    nameEntry:Dock(FILL) nameEntry:DockMargin(S(8), 0, 0, 0)
+    nameEntry:SetPlaceholderText("Nouveau nom…")
+    UI.SkinEntry(nameEntry)
+
+    local renBtn = vgui.Create("DButton", body)
+    renBtn:Dock(TOP) renBtn:DockMargin(0, 0, S(6), S(4)) renBtn:SetTall(S(30))
+    renBtn:SetText("Renommer le slot")
+    UI.SkinButton(renBtn, "gold")
+    renBtn.DoClick = function()
+        local _, slot = slotCombo2:GetSelected()
+        net.Start("origines_rename_slot")
+        net.WriteString(sidEntry:GetValue() or "")
+        net.WriteUInt(tonumber(slot) or 1, 8)
+        net.WriteString(nameEntry:GetValue() or "")
+        net.SendToServer()
+    end
+
+    ------------------------------------------------------------------
+    -- 4) Slot payant (slot 4)
+    ------------------------------------------------------------------
+    sectionLabel(body, "4)  Slot payant (slot " .. BLOOD.Config.MaxSlots .. ")")
+    local rowPaid = vgui.Create("DPanel", body)
+    rowPaid:Dock(TOP) rowPaid:DockMargin(0, S(2), S(6), S(6)) rowPaid:SetTall(S(30))
+    rowPaid.Paint = function() end
+
+    local unlockBtn = vgui.Create("DButton", rowPaid)
+    unlockBtn:Dock(LEFT) unlockBtn:SetWide(S(240))
+    unlockBtn:SetText("Débloquer le slot payant")
+    UI.SkinButton(unlockBtn, "gold")
+    unlockBtn.DoClick = function()
+        net.Start("origines_set_paid")
+        net.WriteString(sidEntry:GetValue() or "")
+        net.WriteBool(true)
+        net.SendToServer()
+    end
+
+    local lockBtn = vgui.Create("DButton", rowPaid)
+    lockBtn:Dock(FILL) lockBtn:DockMargin(S(8), 0, 0, 0)
+    lockBtn:SetText("Verrouiller le slot payant")
+    UI.SkinButton(lockBtn, "default")
+    lockBtn.DoClick = function()
+        net.Start("origines_set_paid")
+        net.WriteString(sidEntry:GetValue() or "")
+        net.WriteBool(false)
         net.SendToServer()
     end
 end

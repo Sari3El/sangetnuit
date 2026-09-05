@@ -1,9 +1,10 @@
 --[[-------------------------------------------------------------------------
     Sang et Nuit — Cycle de vie joueur, slots, synchro client
-      - Chargement des données à la connexion
+      - Chargement des données à la connexion (SANS auto-créer de perso)
+      - À la 1re connexion (0 perso) : joueur VERROUILLÉ (figé + invincible)
+        et menu forcé, jusqu'à ce qu'il crée et nomme son perso.
       - Application des stats au spawn
       - Sélection / création de slot
-      - Commandes chat pour ouvrir le menu personnages
 ---------------------------------------------------------------------------]]
 
 BLOOD = BLOOD or {}
@@ -21,11 +22,39 @@ function BLOOD.Notify(ply, msg, kind)
 end
 
 ----------------------------------------------------------------------
--- Synchro de l'état du joueur vers son client (pour le menu / HUD)
+-- Le joueur possède-t-il au moins un personnage ?
+----------------------------------------------------------------------
+function BLOOD.HasCharacter(ply)
+    if not ply.BloodSlots then return false end
+    for i = 1, C.MaxSlots do
+        if ply.BloodSlots[i] then return true end
+    end
+    return false
+end
+
+----------------------------------------------------------------------
+-- Verrouillage (figé + invincible) tant qu'aucun perso n'est créé
+----------------------------------------------------------------------
+function BLOOD.SetLocked(ply, locked)
+    if not IsValid(ply) then return end
+    if locked then
+        ply.BloodLocked = true
+        ply:Lock()       -- bloque déplacement / armes
+        ply:GodEnable()  -- invincible
+    elseif ply.BloodLocked then
+        ply.BloodLocked = false
+        ply:UnLock()
+        ply:GodDisable()
+    end
+end
+
+----------------------------------------------------------------------
+-- Synchro de l'état du joueur vers son client (menu / HUD)
 ----------------------------------------------------------------------
 function BLOOD.SyncPlayer(ply)
     if not IsValid(ply) then return end
     net.Start("blood_sync")
+        net.WriteBool(not BLOOD.HasCharacter(ply)) -- mustCreate
         net.WriteUInt(ply.BloodCredits or 0, 32)
         net.WriteUInt(ply.BloodActiveSlot or 1, 8)
         net.WriteBool(ply.BloodPaidUnlocked and true or false)
@@ -44,49 +73,46 @@ function BLOOD.SyncPlayer(ply)
 end
 
 ----------------------------------------------------------------------
--- Chargement des données du joueur (connexion)
+-- Chargement des données du joueur (connexion) — SANS auto-créer de slot
 ----------------------------------------------------------------------
 function BLOOD.LoadPlayer(ply)
     if not IsValid(ply) then return end
     local sid = ply:SteamID64()
     BLOOD.SQL.EnsurePlayerRow(sid)
 
-    -- Au moins un slot 1 (Humain par défaut)
-    local slots = BLOOD.SQL.GetSlots(sid)
-    if not slots[1] then
-        BLOOD.SQL.CreateSlot(sid, 1, "Personnage 1", "human")
-        slots = BLOOD.SQL.GetSlots(sid)
-    end
-
-    ply.BloodSlots        = slots
+    ply.BloodSlots        = BLOOD.SQL.GetSlots(sid) -- peut être vide (1re fois)
     ply.BloodCredits      = BLOOD.GetCredits(sid)
     ply.BloodActiveSlot   = BLOOD.SQL.GetActiveSlot(sid)
     ply.BloodPaidUnlocked = BLOOD.SQL.GetPaidUnlocked(sid)
 
-    -- Slot actif incohérent => on retombe sur 1
-    if not slots[ply.BloodActiveSlot] then
-        ply.BloodActiveSlot = 1
-        BLOOD.SQL.SetActiveSlot(sid, 1)
-    end
-
     ply:SetNWInt("blood_credits", ply.BloodCredits)
 end
 
+----------------------------------------------------------------------
+-- Connexion : charge, synchronise, verrouille + ouvre le menu si 0 perso
+----------------------------------------------------------------------
 hook.Add("PlayerInitialSpawn", "BLOOD_Init", function(ply)
     BLOOD.LoadPlayer(ply)
-    -- Petit délai pour laisser le client se préparer avant la synchro.
     timer.Simple(1, function()
-        if IsValid(ply) then BLOOD.SyncPlayer(ply) end
+        if not IsValid(ply) then return end
+        BLOOD.SyncPlayer(ply)
+        if not BLOOD.HasCharacter(ply) then
+            BLOOD.SetLocked(ply, true)
+            net.Start("blood_open_menu")
+            net.Send(ply)
+        end
     end)
 end)
 
+----------------------------------------------------------------------
+-- Spawn : applique les stats, (dé)verrouille selon la présence d'un perso
+----------------------------------------------------------------------
 hook.Add("PlayerSpawn", "BLOOD_Spawn", function(ply)
     if not ply.BloodSlots then BLOOD.LoadPlayer(ply) end
-    -- Appliquer après le code de spawn du gamemode (DarkRP/Sandbox).
     timer.Simple(C.ApplyDelay, function()
-        if IsValid(ply) and ply:Alive() then
-            BLOOD.ApplyRaceStats(ply)
-        end
+        if not (IsValid(ply) and ply:Alive()) then return end
+        BLOOD.ApplyRaceStats(ply)
+        BLOOD.SetLocked(ply, not BLOOD.HasCharacter(ply))
     end)
 end)
 
@@ -108,17 +134,20 @@ net.Receive("blood_select_slot", function(_, ply)
 
     ply.BloodActiveSlot = slot
     BLOOD.SQL.SetActiveSlot(ply:SteamID64(), slot)
+    BLOOD.SetLocked(ply, false)
     ply:Spawn() -- respawn => ApplyRaceStats via le hook PlayerSpawn
     BLOOD.SyncPlayer(ply)
     BLOOD.Notify(ply, "Personnage " .. slot .. " sélectionné.", "info")
 end)
 
 ----------------------------------------------------------------------
--- Création d'un slot (spawn toujours en Humain)
+-- Création d'un slot (le joueur choisit le NOM ; spawn en Humain)
+--   Le nom est définitif côté joueur (seul un admin peut renommer).
+--   Le premier perso créé devient actif et déverrouille le joueur.
 ----------------------------------------------------------------------
 net.Receive("blood_create_slot", function(_, ply)
     local slot = net.ReadUInt(8)
-    local name = string.sub(net.ReadString() or "", 1, 32)
+    local name = string.Trim(string.sub(net.ReadString() or "", 1, 32))
     if slot < 1 or slot > C.MaxSlots then return end
 
     if slot > C.FreeSlots and not ply.BloodPaidUnlocked then
@@ -129,13 +158,27 @@ net.Receive("blood_create_slot", function(_, ply)
         BLOOD.Notify(ply, "Ce slot existe déjà.", "error")
         return
     end
-    if string.Trim(name) == "" then name = "Personnage " .. slot end
+    if string.len(name) < 2 then
+        BLOOD.Notify(ply, "Nom trop court (2 caractères minimum).", "error")
+        return
+    end
+
+    local hadChar = BLOOD.HasCharacter(ply)
 
     BLOOD.SQL.CreateSlot(ply:SteamID64(), slot, name, "human")
     ply.BloodSlots = ply.BloodSlots or {}
     ply.BloodSlots[slot] = { name = name, race = "human" }
+
+    if not hadChar then
+        -- Premier personnage : devient actif, on déverrouille et on (re)spawn.
+        ply.BloodActiveSlot = slot
+        BLOOD.SQL.SetActiveSlot(ply:SteamID64(), slot)
+        BLOOD.SetLocked(ply, false)
+        ply:Spawn()
+    end
+
     BLOOD.SyncPlayer(ply)
-    BLOOD.Notify(ply, "Personnage créé (slot " .. slot .. ").", "info")
+    BLOOD.Notify(ply, "Personnage « " .. name .. " » créé.", "info")
 end)
 
 ----------------------------------------------------------------------
@@ -160,6 +203,6 @@ hook.Add("PlayerSay", "BLOOD_PlayerMenuCmd", function(ply, text)
         BLOOD.SyncPlayer(ply)
         net.Start("blood_open_menu")
         net.Send(ply)
-        return "" -- ne pas afficher dans le chat public
+        return ""
     end
 end)

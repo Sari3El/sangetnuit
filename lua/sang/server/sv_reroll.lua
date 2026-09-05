@@ -25,6 +25,10 @@ end
 ----------------------------------------------------------------------
 net.Receive("blood_reroll", function(_, ply)
     if onCooldown(ply) then return end
+    if not BLOOD.HasCharacter(ply) then
+        BLOOD.Notify(ply, "Crée d'abord un personnage.", "error")
+        return
+    end
 
     local sid = ply:SteamID64()
     local credits = BLOOD.GetCredits(sid)
@@ -51,6 +55,10 @@ end)
 ----------------------------------------------------------------------
 net.Receive("blood_return_human", function(_, ply)
     if onCooldown(ply) then return end
+    if not BLOOD.HasCharacter(ply) then
+        BLOOD.Notify(ply, "Crée d'abord un personnage.", "error")
+        return
+    end
     BLOOD.SetRace(ply, ply.BloodActiveSlot or 1, "human")
     BLOOD.Notify(ply, "Retour en Humain (gratuit).", "info")
 end)

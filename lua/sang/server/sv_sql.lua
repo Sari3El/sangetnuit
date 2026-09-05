@@ -159,5 +159,11 @@ function BLOOD.SQL.SetSlotRace(sid64, slot, race)
         .. " AND slot = " .. N(slot) .. ";")
 end
 
+--- Change uniquement le nom d'un slot existant.
+function BLOOD.SQL.SetSlotName(sid64, slot, name)
+    sql.Query("UPDATE blood_slots SET name = " .. E(tostring(name)) .. " WHERE steamid64 = " .. E(sid64)
+        .. " AND slot = " .. N(slot) .. ";")
+end
+
 -- Initialisation immédiate.
 BLOOD.SQL.Init()
