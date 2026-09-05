@@ -35,6 +35,7 @@ C.FreeSlots = 3   -- slots 1..3 gratuits ; slot 4 = payant (voir déblocage)
 -- Reroll
 C.RerollCost     = 1     -- 1 crédit = 1 reroll (coût fixe)
 C.RerollCooldown = 1.5   -- anti-spam serveur (secondes) sur les boutons reroll/humain
+C.RerollAnnounceDelay = 4.6 -- délai (s) avant l'annonce publique (après la roulette)
 
 -- Régénération (races à regen)
 C.RegenInterval = 3     -- toutes les X secondes, on applique la regen
@@ -69,6 +70,30 @@ C.HungerMax            = 100
 C.HungerDecayInterval  = 20     -- secondes entre chaque -1 point de faim
 C.HungerStarveDamage   = 0      -- dégâts quand faim = 0 (0 = désactivé)
 C.HungerStarveInterval = 5      -- secondes entre chaque tick de dégâts de faim
+
+----------------------------------------------------------------------
+-- Paliers de rareté (couleur du message d'annonce + roulette de reroll)
+----------------------------------------------------------------------
+C.Tiers = {
+    commun     = { name = "Commun",     color = Color(228, 228, 228) }, -- blanc
+    peucommun  = { name = "Peu commun", color = Color(110, 220, 110) }, -- vert
+    rare       = { name = "Rare",       color = Color(90, 160, 255) },  -- bleu
+    epique     = { name = "Épique",     color = Color(185, 95, 235) },  -- violet
+    mythique   = { name = "Mythique",   color = Color(255, 140, 40) },  -- orange
+    legendaire = { name = "Légendaire", color = Color(255, 215, 60) },  -- jaune / or
+}
+
+-- Palier de chaque race (par id) — ajuste librement.
+C.RaceTiers = {
+    human = "commun", nain = "commun", elfe = "commun", ogre = "commun",
+    demiorc = "commun", gobelin = "commun",
+    hommelezard = "peucommun", hommerat = "peucommun", hommeloup = "peucommun",
+    hommechat = "peucommun", gnome = "peucommun",
+    hautelignee = "rare",
+    hommeaigle  = "epique",     -- « Ciel » -> violet épique
+    sangdragon  = "mythique",   -- orange
+    sorcier     = "legendaire", -- jaune / or légendaire
+}
 
 ----------------------------------------------------------------------
 -- Administration (!origines)

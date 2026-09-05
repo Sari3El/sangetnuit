@@ -16,6 +16,8 @@ if SERVER then
     util.AddNetworkString("blood_create_slot")   -- créer un slot
     util.AddNetworkString("blood_reroll")        -- reroll payant
     util.AddNetworkString("blood_return_human")  -- retour Humain gratuit
+    util.AddNetworkString("blood_reroll_roll")     -- S->C (joueur) : lance la roulette
+    util.AddNetworkString("blood_reroll_announce") -- S->C (tous) : annonce colorée
 
     -- Admin (Client -> Serveur, tout re-vérifié serveur-side)
     util.AddNetworkString("origines_give_credits")

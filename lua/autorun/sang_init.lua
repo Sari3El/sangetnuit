@@ -39,6 +39,7 @@ local MODULES = {
     { "sang/client/cl_admin.lua", "cl" },
     { "sang/client/cl_hud.lua",   "cl" },
     { "sang/client/cl_weaponselect.lua", "cl" },
+    { "sang/client/cl_reroll.lua", "cl" },
 }
 
 local loaded, missing = 0, 0

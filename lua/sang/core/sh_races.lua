@@ -29,6 +29,13 @@ function BLOOD.GetWeaponTags(class)
     return BLOOD.Config.WeaponTags[class] or {}
 end
 
+--- Palier de rareté (nom + couleur) d'une race, pour l'annonce / la roulette.
+function BLOOD.GetTier(id)
+    local C = BLOOD.Config
+    local key = (C.RaceTiers and C.RaceTiers[id]) or "commun"
+    return (C.Tiers and (C.Tiers[key] or C.Tiers.commun)) or { name = "Commun", color = Color(228, 228, 228) }
+end
+
 -- Vérification de cohérence (uniquement côté serveur, au chargement) :
 -- les plages doivent couvrir 1..10000 sans trou ni chevauchement.
 if SERVER then

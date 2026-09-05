@@ -46,8 +46,19 @@ net.Receive("blood_reroll", function(_, ply)
     local newRace = BLOOD.RollRace()
     BLOOD.SetRace(ply, ply.BloodActiveSlot or 1, newRace)
 
-    local rd = BLOOD.GetRace(newRace)
-    BLOOD.Notify(ply, "Reroll => " .. rd.name .. " (" .. rd.rarity .. ") !", "reroll")
+    -- Roulette côté joueur
+    net.Start("blood_reroll_roll")
+    net.WriteString(newRace)
+    net.Send(ply)
+
+    -- Annonce publique (différée pour ne pas spoiler la roulette)
+    local plyName = ply:Nick()
+    timer.Simple(BLOOD.Config.RerollAnnounceDelay or 4.6, function()
+        net.Start("blood_reroll_announce")
+        net.WriteString(plyName)
+        net.WriteString(newRace)
+        net.Broadcast()
+    end)
 end)
 
 ----------------------------------------------------------------------
