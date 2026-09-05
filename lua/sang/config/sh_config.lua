@@ -55,6 +55,22 @@ C.ApplyDelay = 0.15
 C.MagicDamageBits = bit.bor(DMG_SHOCK, DMG_ENERGYBEAM)
 
 ----------------------------------------------------------------------
+-- Économie & survie
+----------------------------------------------------------------------
+
+-- Monnaie de jeu (« l'argent sur soi »), PAR PERSONNAGE, distincte des
+-- crédits de reroll et de l'or DarkRP. Stockée en SQL dans le slot.
+C.Currency = "Covan"            -- nom affiché de la monnaie
+C.StartingCovan = 0             -- Covan de départ d'un nouveau personnage
+
+-- Faim (barre verticale du HUD). Valeur 0..HungerMax, décroît avec le temps.
+C.HungerEnabled        = true
+C.HungerMax            = 100
+C.HungerDecayInterval  = 20     -- secondes entre chaque -1 point de faim
+C.HungerStarveDamage   = 0      -- dégâts quand faim = 0 (0 = désactivé)
+C.HungerStarveInterval = 5      -- secondes entre chaque tick de dégâts de faim
+
+----------------------------------------------------------------------
 -- Administration (!origines)
 ----------------------------------------------------------------------
 

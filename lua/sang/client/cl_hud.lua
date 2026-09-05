@@ -77,7 +77,7 @@ end
 ----------------------------------------------------------------------
 -- Valeurs animées (lissage)
 ----------------------------------------------------------------------
-local anim = { hp = 1, armor = 0, mana = 1 }
+local anim = { hp = 1, armor = 0, mana = 1, hunger = 1 }
 
 ----------------------------------------------------------------------
 -- Rendu du HUD
@@ -91,27 +91,33 @@ hook.Add("HUDPaint", "BLOOD_HUD", function()
         return
     end
 
-    -- Race active (détermine le nombre de barres)
+    -- Infos joueur
     local raceId   = ply:GetNWString("blood_race", "human")
     local raceData = BLOOD.Races and BLOOD.Races[raceId]
     local slotData = BLOOD.MyData and BLOOD.MyData.slots and BLOOD.MyData.slots[BLOOD.MyData.activeSlot]
     local persoName = (slotData and slotData.name) or ply:Nick()
     local isSorcier = (raceId == "sorcier")
-    local nBars = isSorcier and 3 or 2
+    local covan     = ply:GetNWInt("blood_covan", 0)
+    local hungerMax = math.max(1, BLOOD.Config.HungerMax or 100)
+    local hunger    = ply:GetNWInt("blood_hunger", hungerMax)
 
-    -- Layout (coin bas-gauche), hauteur adaptée au nombre de barres
-    local pad  = S(14)
-    local barH = S(22)
-    local gap  = S(8)
-    local topH = S(54) -- nom + race + filet
-    local w    = S(366)
-    local h    = pad + topH + (nBars * barH + (nBars - 1) * gap) + pad
-    local x    = S(24)
-    local y    = ScrH() - h - S(24)
+    -- Layout TAILLE FIXE : on réserve toujours 3 emplacements de barre
+    -- (la mana ne s'affiche que pour le Sorcier, mais l'espace reste réservé).
+    local pad   = S(14)
+    local barH  = S(22)
+    local gap   = S(8)
+    local topH  = S(54)
+    local nSlots = 3
+    local barsH = nSlots * barH + (nSlots - 1) * gap
+    local vW    = S(30) -- barre de faim (verticale)
+    local w     = S(408)
+    local h     = pad + topH + barsH + pad
+    local x     = S(24)
+    local y     = ScrH() - h - S(24)
 
     UI.Panel(x, y, w, h)
 
-    -- Model (à gauche, pleine hauteur)
+    -- Model (gauche, pleine hauteur => toujours visible, taille constante)
     local mW = S(98)
     local mH = h - pad * 2
     local mX = x + pad
@@ -127,18 +133,30 @@ hook.Add("HUDPaint", "BLOOD_HUD", function()
     mdl:SetPos(mX, mY)
     mdl:SetSize(mW, mH)
 
-    -- Colonne de droite
-    local bx = mX + mW + S(14)
-    local bw = (x + w - pad) - bx
+    -- Barre de faim (verticale, à droite)
+    local vX = x + w - pad - vW
+    local vY = y + pad + topH
+    local vH = barsH
 
+    -- Colonne centrale
+    local bx = mX + mW + S(14)
+    local bw = (vX - S(12)) - bx
+
+    -- Nom
     draw.SimpleText(persoName, "SangUI_Title", bx + 1, y + pad + 1, C.shadow, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
     draw.SimpleText(persoName, "SangUI_Title", bx,     y + pad,     C.txt,    TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+    -- Race (gauche) + Covan (droite)
     draw.SimpleText(raceData and raceData.name or raceId, "SangUI_Small",
         bx, y + pad + S(26), C.goldLt, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+    local covanTxt = string.Comma(covan) .. " " .. (BLOOD.Config.Currency or "Covan")
+    draw.SimpleText(covanTxt, "SangUI_Bar", bx + bw + 1, y + pad + S(27), C.shadow, TEXT_ALIGN_RIGHT, TEXT_ALIGN_TOP)
+    draw.SimpleText(covanTxt, "SangUI_Bar", bx + bw,     y + pad + S(26), C.goldLt, TEXT_ALIGN_RIGHT, TEXT_ALIGN_TOP)
+    -- filet
     surface.SetDrawColor(C.goldDk)
     surface.DrawRect(bx, y + pad + S(46), bw, 1)
 
-    local by = y + pad + topH
+    -- Barres horizontales
+    local by = vY
 
     -- PV
     local hp, hpMax = ply:Health(), math.max(1, ply:GetMaxHealth())
@@ -152,7 +170,7 @@ hook.Add("HUDPaint", "BLOOD_HUD", function()
     UI.Bar(bx, by, bw, barH, anim.armor, C.steel, C.steelLt, "Armure", ar .. " / " .. arMax)
     by = by + barH + gap
 
-    -- Mana (Sorcier uniquement)
+    -- Mana (Sorcier uniquement — sinon l'emplacement reste vide)
     if isSorcier then
         local manaMax = ply:GetNWInt("blood_mana_max", 0)
         local manaCur
@@ -164,6 +182,12 @@ hook.Add("HUDPaint", "BLOOD_HUD", function()
         anim.mana = Lerp(FrameTime() * 8, anim.mana, math.Clamp(manaCur / manaMax, 0, 1))
         UI.Bar(bx, by, bw, barH, anim.mana, C.mana, C.manaLt, "Mana", manaCur .. " / " .. manaMax)
     end
+
+    -- Faim (verticale)
+    anim.hunger = Lerp(FrameTime() * 8, anim.hunger, math.Clamp(hunger / hungerMax, 0, 1))
+    UI.VBar(vX, vY, vW, vH, anim.hunger, C.hunger, C.hungerLt)
+    draw.SimpleText("Faim", "SangUI_Tiny", vX + vW / 2, vY - S(13), C.goldLt, TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
+    draw.SimpleText(tostring(math.Round(hunger)), "SangUI_Tiny", vX + vW / 2, vY + vH + S(2), C.txt, TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
 end)
 
 hook.Add("ShutDown", "BLOOD_HUD_Cleanup", function()

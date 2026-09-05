@@ -27,6 +27,8 @@ local MODULES = {
     { "sang/server/sv_sql.lua",     "sv" },
     { "sang/server/sv_race.lua",    "sv" },
     { "sang/server/sv_stats.lua",   "sv" },
+    { "sang/server/sv_money.lua",   "sv" },
+    { "sang/server/sv_hunger.lua",  "sv" },
     { "sang/server/sv_players.lua", "sv" },
     { "sang/server/sv_reroll.lua",  "sv" },
     { "sang/server/sv_admin.lua",   "sv" },

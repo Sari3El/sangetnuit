@@ -30,6 +30,8 @@ UI.Col = {
     steelLt= Color(158, 162, 174),
     mana   = Color(66, 80, 138),
     manaLt = Color(104, 120, 182),
+    hunger = Color(150, 100, 44),      -- pain / ambre
+    hungerLt = Color(198, 146, 74),
     txt    = Color(220, 206, 174),     -- encre parchemin
     txtDim = Color(146, 130, 100),
     line   = Color(66, 52, 30, 255),
@@ -45,6 +47,7 @@ surface.CreateFont("SangUI_H1",    { font = "Georgia", size = S(27), weight = 80
 surface.CreateFont("SangUI_Body",  { font = "Georgia", size = S(18), weight = 600, antialias = true, extended = true })
 surface.CreateFont("SangUI_Small", { font = "Georgia", size = S(15), weight = 600, antialias = true, extended = true, italic = true })
 surface.CreateFont("SangUI_Bar",   { font = "Georgia", size = S(15), weight = 700, antialias = true, extended = true })
+surface.CreateFont("SangUI_Tiny",  { font = "Georgia", size = S(12), weight = 700, antialias = true, extended = true })
 
 ----------------------------------------------------------------------
 -- Utilitaires couleur
@@ -137,6 +140,26 @@ function UI.Bar(x, y, w, h, frac, fill, fillLt, label, valTxt)
         draw.SimpleText(valTxt, "SangUI_Bar", x + w - S(8) + 1, y + h / 2 + 1, C.shadow, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
         draw.SimpleText(valTxt, "SangUI_Bar", x + w - S(8),     y + h / 2,     C.txt,    TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
     end
+end
+
+----------------------------------------------------------------------
+-- Barre VERTICALE (faim...) — remplissage depuis le bas
+----------------------------------------------------------------------
+function UI.VBar(x, y, w, h, frac, fill, fillLt)
+    frac = math.Clamp(frac, 0, 1)
+    -- piste
+    vgradient(x, y, w, h, C.ink, shade(C.bg1, -6))
+    -- remplissage (bas -> haut)
+    local fh = math.floor((h - 2) * frac)
+    if fh > 0 then
+        local fy = y + h - 1 - fh
+        vgradient(x + 1, fy, w - 2, fh, fillLt, shade(fill, -30))
+        surface.SetDrawColor(fillLt.r, fillLt.g, fillLt.b, 80)
+        surface.DrawRect(x + 1, fy, w - 2, 1)
+    end
+    -- bordures
+    surface.SetDrawColor(C.ink);    surface.DrawOutlinedRect(x, y, w, h, 1)
+    surface.SetDrawColor(C.goldDk); surface.DrawOutlinedRect(x, y, w, h, 1)
 end
 
 ----------------------------------------------------------------------

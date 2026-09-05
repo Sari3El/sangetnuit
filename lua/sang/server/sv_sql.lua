@@ -34,9 +34,20 @@ function BLOOD.SQL.Init()
         slot      INTEGER NOT NULL,
         name      TEXT,
         race      TEXT NOT NULL DEFAULT 'human',
+        covan     INTEGER NOT NULL DEFAULT 0,
         created   INTEGER,
         PRIMARY KEY (steamid64, slot)
     );]])
+
+    -- Migration : ajoute la colonne covan aux bases existantes.
+    local cols = sql.Query("PRAGMA table_info(blood_slots);")
+    local hasCovan = false
+    if istable(cols) then
+        for _, c in ipairs(cols) do if c.name == "covan" then hasCovan = true break end end
+    end
+    if not hasCovan then
+        sql.Query("ALTER TABLE blood_slots ADD COLUMN covan INTEGER NOT NULL DEFAULT 0;")
+    end
 end
 
 --- Crée la ligne joueur si elle n'existe pas.
@@ -122,34 +133,47 @@ end
 -- Slots de personnage (nom + race)
 ----------------------------------------------------------------------
 
---- Retourne { [slot] = { name=, race= } } pour un joueur.
+--- Retourne { [slot] = { name=, race=, covan= } } pour un joueur.
 function BLOOD.SQL.GetSlots(sid64)
-    local rows = sql.Query("SELECT slot, name, race FROM blood_slots WHERE steamid64 = " .. E(sid64) .. " ORDER BY slot;")
+    local rows = sql.Query("SELECT slot, name, race, covan FROM blood_slots WHERE steamid64 = " .. E(sid64) .. " ORDER BY slot;")
     local out = {}
     if istable(rows) then
         for _, row in ipairs(rows) do
-            out[tonumber(row.slot)] = { name = row.name, race = row.race }
+            out[tonumber(row.slot)] = { name = row.name, race = row.race, covan = tonumber(row.covan) or 0 }
         end
     end
     return out
 end
 
---- Retourne { name=, race= } d'un slot précis, ou nil.
+--- Retourne { name=, race=, covan= } d'un slot précis, ou nil.
 function BLOOD.SQL.GetSlot(sid64, slot)
-    local rows = sql.Query("SELECT name, race FROM blood_slots WHERE steamid64 = " .. E(sid64)
+    local rows = sql.Query("SELECT name, race, covan FROM blood_slots WHERE steamid64 = " .. E(sid64)
         .. " AND slot = " .. N(slot) .. ";")
     if istable(rows) and rows[1] then
-        return { name = rows[1].name, race = rows[1].race }
+        return { name = rows[1].name, race = rows[1].race, covan = tonumber(rows[1].covan) or 0 }
     end
     return nil
+end
+
+--- Covan d'un slot (SQL, offline-safe).
+function BLOOD.SQL.GetCovan(sid64, slot)
+    local v = sql.QueryValue("SELECT covan FROM blood_slots WHERE steamid64 = " .. E(sid64)
+        .. " AND slot = " .. N(slot) .. ";")
+    return tonumber(v) or 0
+end
+
+function BLOOD.SQL.SetCovan(sid64, slot, amount)
+    sql.Query("UPDATE blood_slots SET covan = " .. math.max(0, N(amount)) .. " WHERE steamid64 = " .. E(sid64)
+        .. " AND slot = " .. N(slot) .. ";")
 end
 
 --- Crée (ou remplace) un slot. Un perso spawn TOUJOURS en Humain par défaut.
 function BLOOD.SQL.CreateSlot(sid64, slot, name, race)
     race = BLOOD.RaceExists(race) and race or "human"
     name = tostring(name or ("Personnage " .. N(slot)))
-    sql.Query("INSERT OR REPLACE INTO blood_slots (steamid64, slot, name, race, created) VALUES ("
-        .. E(sid64) .. ", " .. N(slot) .. ", " .. E(name) .. ", " .. E(race) .. ", " .. os.time() .. ");")
+    local startCovan = math.max(0, math.floor(BLOOD.Config.StartingCovan or 0))
+    sql.Query("INSERT OR REPLACE INTO blood_slots (steamid64, slot, name, race, covan, created) VALUES ("
+        .. E(sid64) .. ", " .. N(slot) .. ", " .. E(name) .. ", " .. E(race) .. ", " .. startCovan .. ", " .. os.time() .. ");")
 end
 
 --- Change uniquement la race d'un slot existant.
