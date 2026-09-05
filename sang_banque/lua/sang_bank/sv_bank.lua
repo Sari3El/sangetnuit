@@ -105,3 +105,24 @@ end)
 net.Receive("sang_bank_reqsync", function(_, ply)
     SBANK.Sync(ply)
 end)
+
+-- Envoie le solde bancaire d'un (sid, slot) à un admin.
+function SBANK.SendQuery(ply, sid, slot, amount)
+    if not IsValid(ply) then return end
+    if amount == nil then amount = SBANK.GetPersonal(sid, slot) end
+    net.Start("sang_bank_queryresult")
+        net.WriteString(tostring(sid))
+        net.WriteUInt(tonumber(slot) or 1, 8)
+        net.WriteUInt(math.max(0, math.floor(amount)), 32)
+    net.Send(ply)
+end
+
+-- L'admin demande le solde d'un joueur/slot.
+net.Receive("sang_bank_query", function(_, ply)
+    if not (BLOOD and BLOOD.IsAdmin and BLOOD.IsAdmin(ply)) then return end
+    local rawSid = net.ReadString()
+    local slot = net.ReadUInt(8)
+    local sid = BLOOD and BLOOD.NormalizeSteamID and BLOOD.NormalizeSteamID(rawSid) or nil
+    if not sid or slot < 1 or slot > 4 then return end
+    SBANK.SendQuery(ply, sid, slot, SBANK.GetPersonal(sid, slot))
+end)

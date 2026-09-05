@@ -60,8 +60,24 @@ net.Receive("sang_bank_setplayer", function(_, ply)
     if not sid then SBANK.Notify(ply, "SteamID invalide.", "error") return end
     if slot < 1 or slot > 4 then SBANK.Notify(ply, "Slot invalide.", "error") return end
 
-    local bal = SBANK.AddPersonal(sid, slot, delta)
-    log(ply, "a modifié la banque de " .. sid .. " slot " .. slot .. " de " .. delta .. " (solde: " .. bal .. ")")
-    SBANK.Notify(ply, "Banque " .. sid .. " slot " .. slot .. " = " .. bal .. ".", "info")
+    local bal
+    if delta < 0 then
+        -- RETRAIT : borné au solde dispo, et l'argent est mis SUR TOI (admin).
+        local take = math.min(-delta, SBANK.GetPersonal(sid, slot))
+        if take > 0 then
+            SBANK.AddPersonal(sid, slot, -take)
+            if BLOOD and BLOOD.AddCovan then BLOOD.AddCovan(ply, take) end
+        end
+        bal = SBANK.GetPersonal(sid, slot)
+        log(ply, "a retiré " .. take .. " de la banque de " .. sid .. " slot " .. slot .. " (mis sur lui ; solde: " .. bal .. ")")
+        SBANK.Notify(ply, "Retiré " .. take .. " (mis sur toi). Banque " .. sid .. " slot " .. slot .. " = " .. bal .. ".", "info")
+    else
+        -- AJOUT (crédite la banque du joueur)
+        bal = SBANK.AddPersonal(sid, slot, delta)
+        log(ply, "a ajouté " .. delta .. " sur la banque de " .. sid .. " slot " .. slot .. " (solde: " .. bal .. ")")
+        SBANK.Notify(ply, "Ajouté " .. delta .. ". Banque " .. sid .. " slot " .. slot .. " = " .. bal .. ".", "info")
+    end
+
+    SBANK.SendQuery(ply, sid, slot, bal)
     SBANK.Sync(ply)
 end)

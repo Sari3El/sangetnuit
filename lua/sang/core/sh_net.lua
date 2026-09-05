@@ -23,4 +23,6 @@ if SERVER then
     util.AddNetworkString("origines_rename_slot")
     util.AddNetworkString("origines_set_paid")
     util.AddNetworkString("origines_set_covan")
+    util.AddNetworkString("origines_query_slot")  -- C->S : infos d'un slot
+    util.AddNetworkString("origines_slot_info")   -- S->C : nom/race/covan d'un slot
 end

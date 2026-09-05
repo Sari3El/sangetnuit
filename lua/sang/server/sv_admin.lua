@@ -187,6 +187,34 @@ end)
 ----------------------------------------------------------------------
 -- Action : définir / ajouter des Covan sur un slot (marche hors-ligne)
 ----------------------------------------------------------------------
+----------------------------------------------------------------------
+-- Requête : infos d'un slot (nom / race / covan) pour l'affichage admin
+----------------------------------------------------------------------
+net.Receive("origines_query_slot", function(_, ply)
+    if not BLOOD.IsAdmin(ply) then return end
+    local rawSid = net.ReadString()
+    local slot = net.ReadUInt(8)
+    local sid = BLOOD.NormalizeSteamID(rawSid)
+    if not sid or slot < 1 or slot > C.MaxSlots then return end
+
+    local sd
+    local target = BLOOD.GetPlayerBySteamID64(sid)
+    if IsValid(target) and target.BloodSlots and target.BloodSlots[slot] then
+        sd = target.BloodSlots[slot]
+    else
+        sd = BLOOD.SQL.GetSlot(sid, slot)
+    end
+
+    net.Start("origines_slot_info")
+        net.WriteString(sid)
+        net.WriteUInt(slot, 8)
+        net.WriteBool(sd ~= nil)
+        net.WriteString(sd and (sd.name or "") or "")
+        net.WriteString(sd and (sd.race or "human") or "human")
+        net.WriteUInt(sd and (sd.covan or 0) or 0, 32)
+    net.Send(ply)
+end)
+
 net.Receive("origines_set_covan", function(_, ply)
     if not BLOOD.IsAdmin(ply) then
         logAdmin("REFUS set_covan de " .. ply:Nick() .. " (" .. ply:SteamID64() .. ") — non autorisé")

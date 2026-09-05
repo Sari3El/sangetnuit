@@ -31,6 +31,29 @@ local function fieldLabel(parent, text)
     return l
 end
 
+local function raceName(id)
+    local r = BLOOD.Races and BLOOD.Races[id]
+    return r and (r.name or id) or id
+end
+
+-- Info live d'un slot (nom / race / covan) affichée dans la section 2.
+net.Receive("origines_slot_info", function()
+    local sid    = net.ReadString()
+    local slot   = net.ReadUInt(8)
+    local exists = net.ReadBool()
+    local name   = net.ReadString()
+    local race   = net.ReadString()
+    local covan  = net.ReadUInt(32)
+    if not IsValid(BLOOD._origInfoLabel) then return end
+    local cur = (BLOOD.Config and BLOOD.Config.Currency) or "Covan"
+    if exists then
+        BLOOD._origInfoLabel:SetText("Actuel — Slot " .. slot .. " : « " .. name .. " »   |   "
+            .. raceName(race) .. "   |   " .. string.Comma(covan) .. " " .. cur)
+    else
+        BLOOD._origInfoLabel:SetText("Actuel — Slot " .. slot .. " : (vide)")
+    end
+end)
+
 function BLOOD.OpenAdminMenu(races)
     if IsValid(BLOOD.AdminFrame) then BLOOD.AdminFrame:Remove() end
 
@@ -98,6 +121,23 @@ function BLOOD.OpenAdminMenu(races)
     for i = 1, BLOOD.Config.MaxSlots do slotCombo:AddChoice("Slot " .. i, i) end
     slotCombo:ChooseOptionID(1)
 
+    -- Requête des infos du perso sélectionné (SteamID + slot section 2)
+    local function queryInfo()
+        local sid = string.Trim(sidEntry:GetValue() or "")
+        if sid == "" then return end
+        local _, slot = slotCombo:GetSelected()
+        net.Start("origines_query_slot")
+        net.WriteString(sid)
+        net.WriteUInt(tonumber(slot) or 1, 8)
+        net.SendToServer()
+    end
+    slotCombo.OnSelect = function() queryInfo() end
+    sidEntry.OnValueChange = function() queryInfo() end
+    combo.OnSelect = function(_, _, _, data)
+        sidEntry:SetText(data or "")
+        queryInfo()
+    end
+
     local raceCombo = vgui.Create("DComboBox", rowRace)
     raceCombo:Dock(FILL) raceCombo:DockMargin(S(8), 0, 0, 0)
     UI.SkinCombo(raceCombo)
@@ -116,7 +156,14 @@ function BLOOD.OpenAdminMenu(races)
         net.WriteUInt(tonumber(slot) or 1, 8)
         net.WriteString(raceId or "human")
         net.SendToServer()
+        timer.Simple(0.15, queryInfo) -- rafraîchit l'affichage "Actuel"
     end
+
+    local infoLbl = vgui.Create("DLabel", body)
+    infoLbl:Dock(TOP) infoLbl:DockMargin(0, S(2), S(6), S(4)) infoLbl:SetTall(S(22))
+    infoLbl:SetFont("SangUI_Small") infoLbl:SetTextColor(C.goldLt)
+    infoLbl:SetText("Actuel — sélectionne un SteamID et un slot")
+    BLOOD._origInfoLabel = infoLbl
 
     ------------------------------------------------------------------
     -- 3) Renommer un slot

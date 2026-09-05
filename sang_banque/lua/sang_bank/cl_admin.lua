@@ -5,6 +5,34 @@
 ---------------------------------------------------------------------------]]
 
 SBANK = SBANK or {}
+SBANK.AdminSel = SBANK.AdminSel or { sid = "", slot = 1 }
+SBANK.PlayerBank = SBANK.PlayerBank or { sid = nil, slot = nil, amount = nil }
+
+local function pbankText()
+    local sel, pb = SBANK.AdminSel, SBANK.PlayerBank
+    if pb.sid and pb.sid == sel.sid and pb.slot == sel.slot and pb.amount ~= nil then
+        return "Solde en banque (slot " .. sel.slot .. ") : " .. string.Comma(pb.amount)
+    end
+    return "Solde en banque : — (choisis un joueur et un slot)"
+end
+
+local function queryPlayerBank()
+    local sid = SBANK.AdminSel.sid
+    if not sid or sid == "" then return end
+    net.Start("sang_bank_query")
+    net.WriteString(sid)
+    net.WriteUInt(SBANK.AdminSel.slot or 1, 8)
+    net.SendToServer()
+end
+SBANK._queryPlayerBank = queryPlayerBank
+
+net.Receive("sang_bank_queryresult", function()
+    local sid = net.ReadString()
+    local slot = net.ReadUInt(8)
+    local amount = net.ReadUInt(32)
+    SBANK.PlayerBank = { sid = sid, slot = slot, amount = amount }
+    if IsValid(SBANK._pbankLabel) then SBANK._pbankLabel:SetText(pbankText()) end
+end)
 
 local function section(parent, text)
     local UI, C = BLOOD.UI, BLOOD.UI.Col
@@ -98,7 +126,12 @@ function SBANK.RefreshAdminPanel()
     sidLbl:SetText("SteamID cible (STEAM_0:... ou 7656...) :")
     local sidEntry = vgui.Create("DTextEntry", p)
     sidEntry:Dock(TOP) sidEntry:DockMargin(0, 0, S(6), S(4)) sidEntry:SetTall(S(26))
+    sidEntry:SetText(SBANK.AdminSel.sid or "")
     UI.SkinEntry(sidEntry)
+    sidEntry.OnValueChange = function(_, val)
+        SBANK.AdminSel.sid = string.Trim(val or "")
+        queryPlayerBank()
+    end
 
     -- Liste déroulante des joueurs connectés (comme le menu origines)
     local plyCombo = vgui.Create("DComboBox", p)
@@ -108,16 +141,24 @@ function SBANK.RefreshAdminPanel()
     for _, pl in ipairs(player.GetAll()) do
         plyCombo:AddChoice(pl:Nick() .. "  (" .. pl:SteamID() .. ")", pl:SteamID64())
     end
-    plyCombo.OnSelect = function(_, _, _, data) sidEntry:SetText(data or "") end
+    plyCombo.OnSelect = function(_, _, _, data)
+        sidEntry:SetText(data or "")
+        SBANK.AdminSel.sid = data or ""
+        queryPlayerBank()
+    end
 
     local prow = vgui.Create("DPanel", p)
-    prow:Dock(TOP) prow:DockMargin(0, S(2), S(6), S(6)) prow:SetTall(S(28))
+    prow:Dock(TOP) prow:DockMargin(0, S(2), S(6), S(4)) prow:SetTall(S(28))
     prow.Paint = function() end
     local slotCombo = vgui.Create("DComboBox", prow)
     slotCombo:Dock(LEFT) slotCombo:SetWide(S(120))
     UI.SkinCombo(slotCombo)
     for i = 1, 4 do slotCombo:AddChoice("Slot " .. i, i) end
-    slotCombo:ChooseOptionID(1)
+    slotCombo:ChooseOptionID(math.Clamp(SBANK.AdminSel.slot or 1, 1, 4))
+    slotCombo.OnSelect = function(_, _, val)
+        SBANK.AdminSel.slot = tonumber(val) or 1
+        queryPlayerBank()
+    end
     local pent = vgui.Create("DTextEntry", prow)
     pent:Dock(LEFT) pent:DockMargin(S(8), S(1), 0, S(1)) pent:SetWide(S(110)) pent:SetNumeric(true) pent:SetText("0")
     UI.SkinEntry(pent)
@@ -139,6 +180,15 @@ function SBANK.RefreshAdminPanel()
     end
     padd.DoClick = function() sendP(1) end
     prem.DoClick = function() sendP(-1) end
+
+    -- Solde en banque du joueur/slot sélectionné
+    local pbankLbl = vgui.Create("DLabel", p)
+    pbankLbl:Dock(TOP) pbankLbl:DockMargin(0, S(2), S(6), S(6)) pbankLbl:SetTall(S(22))
+    pbankLbl:SetFont("SangUI_Body") pbankLbl:SetTextColor(C.goldLt)
+    pbankLbl:SetText(pbankText())
+    SBANK._pbankLabel = pbankLbl
+
+    queryPlayerBank() -- rafraîchit le solde affiché
 end
 
 function SBANK.OpenAdminPanel()
