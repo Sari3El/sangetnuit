@@ -133,10 +133,11 @@ hook.Add("HUDPaint", "BLOOD_HUD", function()
     mdl:SetPos(mX, mY)
     mdl:SetSize(mW, mH)
 
-    -- Barre de faim (verticale, à droite)
-    local vX = x + w - pad - vW
-    local vY = y + pad + topH
-    local vH = barsH
+    -- Barre de faim (verticale, à droite) — haute, façon jauge
+    local vX   = x + w - pad - vW
+    local vTop = y + pad + S(18)
+    local vBot = y + h - pad
+    local vH   = vBot - vTop
 
     -- Colonne centrale
     local bx = mX + mW + S(14)
@@ -156,7 +157,7 @@ hook.Add("HUDPaint", "BLOOD_HUD", function()
     surface.DrawRect(bx, y + pad + S(46), bw, 1)
 
     -- Barres horizontales
-    local by = vY
+    local by = y + pad + topH
 
     -- PV
     local hp, hpMax = ply:Health(), math.max(1, ply:GetMaxHealth())
@@ -183,11 +184,14 @@ hook.Add("HUDPaint", "BLOOD_HUD", function()
         UI.Bar(bx, by, bw, barH, anim.mana, C.mana, C.manaLt, "Mana", manaCur .. " / " .. manaMax)
     end
 
-    -- Faim (verticale)
+    -- Faim (jauge verticale verte, façon jauge de carburant)
     anim.hunger = Lerp(FrameTime() * 8, anim.hunger, math.Clamp(hunger / hungerMax, 0, 1))
-    UI.VBar(vX, vY, vW, vH, anim.hunger, C.hunger, C.hungerLt)
-    draw.SimpleText("Faim", "SangUI_Tiny", vX + vW / 2, vY - S(13), C.goldLt, TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
-    draw.SimpleText(tostring(math.Round(hunger)), "SangUI_Tiny", vX + vW / 2, vY + vH + S(2), C.txt, TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
+    draw.SimpleText("Faim", "SangUI_Tiny", vX + vW / 2, y + pad, C.goldLt, TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
+    UI.VBar(vX, vTop, vW, vH, anim.hunger, C.hunger, C.hungerLt)
+    -- valeur à l'intérieur, en bas
+    local hv = tostring(math.Round(hunger))
+    draw.SimpleText(hv, "SangUI_Tiny", vX + vW / 2 + 1, vBot - S(14) + 1, C.shadow, TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
+    draw.SimpleText(hv, "SangUI_Tiny", vX + vW / 2,     vBot - S(14),     C.txt,    TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
 end)
 
 hook.Add("ShutDown", "BLOOD_HUD_Cleanup", function()
