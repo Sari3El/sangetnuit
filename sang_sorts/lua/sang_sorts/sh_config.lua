@@ -58,7 +58,8 @@ C.Translocation = {
 -- ne seraient pas dans cruel_base*.pcf, auto-découverts). Ajoute ici le(s)
 -- fichier(s) manquant(s) si une particule ne s'affiche pas.
 C.ParticleFiles = {
-    "particles/cruel_base2.pcf",
+    "particles/cruel_base.pcf",   -- strange_portal, flamestrike, ...
+    "particles/cruel_base2.pcf",  -- golden_energy, ...
 }
 
 -- Sort « Sève Curative » (Druidique) : zone de SOIN au sol
@@ -92,6 +93,7 @@ C.Elementaire = {
     Radius      = 200, Damage = 40,        -- dégâts de zone (feu) + met le feu
     OrbitTime   = 1.5, MaxFly = 10,
     FlyParticle = "[2]_fireball2",
-    BoomParticle = "[0]_barrel_blast",
+    BoomParticle = "[0]_barrel_blast",     -- explosion
+    GroundParticle = "[2]_flamestrike",    -- flammes au sol (cruel_base.pcf)
     Sound       = "ambient/explosions/explode_4.wav",
 }

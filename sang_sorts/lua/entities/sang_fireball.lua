@@ -30,13 +30,14 @@ if SERVER then
         self:NextThink(CurTime())
     end
 
-    function ENT:SetupFireball(owner, radius, dmg, orbitTime, maxFly, flyP, boomP, sound)
+    function ENT:SetupFireball(owner, radius, dmg, orbitTime, maxFly, flyP, boomP, sound, groundP)
         self.SOwner    = owner
         self.SRadius   = radius or 200
         self.SDmg      = dmg or 40
         self.OrbitTime = orbitTime or 1.5
         self.MaxFly    = maxFly or 10
         self.BoomP     = boomP
+        self.GroundP   = groundP
         self.Sound     = sound
         self.Speed     = 2000
         self:SetFlyParticle(flyP or "")
@@ -80,6 +81,20 @@ if SERVER then
     function ENT:Explode(pos)
         self:SetPos(pos)
         if self.BoomP then ParticleEffect(self.BoomP, pos, Angle(0, 0, 0)) end
+
+        -- Flammes au sol : on trace vers le bas pour poser l'effet sur le sol
+        -- sous l'explosion (orienté vers le haut).
+        if self.GroundP and self.GroundP ~= "" then
+            local down = util.TraceLine({
+                start  = pos,
+                endpos = pos - Vector(0, 0, 200),
+                filter = { self, self.SOwner },
+                mask   = MASK_SOLID_BRUSHONLY,
+            })
+            local gpos = down.Hit and (down.HitPos + down.HitNormal * 2) or pos
+            ParticleEffect(self.GroundP, gpos, Angle(0, 0, 0))
+        end
+
         if self.Sound then sound.Play(self.Sound, pos, 90, math.random(95, 105)) end
         util.ScreenShake(pos, 8, 120, 0.7, (self.SRadius or 200) * 2)
 

@@ -11,15 +11,18 @@ SANGSPELL = SANGSPELL or {}
 local C = (SANGSPELL.Config and SANGSPELL.Config.Elementaire) or {
     Mana = 45, Cooldown = 10, Radius = 200, Damage = 40, OrbitTime = 1.5, MaxFly = 10,
     FlyParticle = "[2]_fireball2", BoomParticle = "[0]_barrel_blast",
+    GroundParticle = "[2]_flamestrike",
     Sound = "ambient/explosions/explode_4.wav",
 }
 
 if SANGSPELL.ResolveParticle then
-    C.FlyParticle  = SANGSPELL.ResolveParticle(C.FlyParticle)
-    C.BoomParticle = SANGSPELL.ResolveParticle(C.BoomParticle)
+    C.FlyParticle    = SANGSPELL.ResolveParticle(C.FlyParticle)
+    C.BoomParticle   = SANGSPELL.ResolveParticle(C.BoomParticle)
+    if C.GroundParticle then C.GroundParticle = SANGSPELL.ResolveParticle(C.GroundParticle) end
 end
 PrecacheParticleSystem(C.FlyParticle)
 PrecacheParticleSystem(C.BoomParticle)
+if C.GroundParticle then PrecacheParticleSystem(C.GroundParticle) end
 
 local Spell = { }
 Spell.NodeOffset = Vector(300, 900, 0)
@@ -39,7 +42,7 @@ function Spell:OnFire(wand)
     if not IsValid(fb) then return false end
     fb:Spawn()
     fb:Activate()
-    fb:SetupFireball(ply, C.Radius, C.Damage, C.OrbitTime, C.MaxFly, C.FlyParticle, C.BoomParticle, C.Sound)
+    fb:SetupFireball(ply, C.Radius, C.Damage, C.OrbitTime, C.MaxFly, C.FlyParticle, C.BoomParticle, C.Sound, C.GroundParticle)
 
     return false
 end
