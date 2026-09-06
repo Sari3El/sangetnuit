@@ -11,6 +11,7 @@ SANGSPELL.Version = "1.0.0"
 local MODULES = {
     { "sang_sorts/sh_config.lua",  "sh" },
     { "sang_sorts/sp_sangvif.lua", "sh" }, -- enregistre le sort (les 2 réalmes)
+    { "sang_sorts/cl_hide.lua",    "cl" }, -- masque les sorts vanilla (client)
 }
 
 local function run(path, realm)

@@ -8,7 +8,18 @@ SANGSPELL = SANGSPELL or {}
 SANGSPELL.Config = SANGSPELL.Config or {}
 local C = SANGSPELL.Config
 
-C.Category = "Sang et Nuit"     -- catégorie affichée dans « All Spells »
+-- Catégories de magie (affichées dans « All Spells », même vides).
+C.Categories = {
+    "Magie Sacré",
+    "Magie Nécrotique",
+    "Magie Druidique",
+    "Magie Élémentaire",
+}
+
+-- Masquer TOUS les sorts vanilla de HPW dans les menus (Tree + All Spells),
+-- côté client uniquement. Les sorts restent enregistrés côté serveur (donc
+-- réactivables plus tard : passe ceci à false). Les SKINS de baguette restent.
+C.HideVanillaSpells = true
 
 -- Sort « Sang Vif » (buff vitesse + saut, aura dorée)
 C.SangVif = {
