@@ -36,7 +36,8 @@ function Spell:OnFire(wand)
             if IsValid(link) then
                 link:SetPos((ply:WorldSpaceCenter() + e:WorldSpaceCenter()) * 0.5)
                 link:Spawn() link:Activate()
-                link:SetupLink(ply, e, C.Duration, C.MaxLink, C.Dps, C.HealRatio)
+                link:SetupLink(ply, e, { dur = C.Duration, maxDist = C.MaxLink,
+                    mode = "drain", dps = C.Dps, healRatio = C.HealRatio, color = COL })
             end
         end,
     })

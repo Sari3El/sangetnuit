@@ -41,6 +41,21 @@ local MODULES = {
     { "sang_sorts/sp_nec_cloak.lua",      "sh" }, -- N7 Manteau d'Ombre
     { "sang_sorts/sp_nec_fly.lua",        "sh" }, -- N8 Vol Spectral
     { "sang_sorts/sp_nec_servant.lua",    "sh" }, -- N13 Serviteur
+    -- Nouveaux sorts Élémentaires (orange) :
+    { "sang_sorts/sp_elem_chain.lua",     "sh" }, -- E1 Éclair en Chaîne
+    { "sang_sorts/sp_elem_ice.lua",       "sh" }, -- E2 Pic de Glace
+    { "sang_sorts/sp_elem_wall.lua",      "sh" }, -- E4 Mur de Feu
+    { "sang_sorts/sp_elem_meteor.lua",    "sh" }, -- E5 Météore
+    { "sang_sorts/sp_elem_bolt.lua",      "sh" }, -- E6 Foudre Fulgurante
+    { "sang_sorts/sp_elem_rock.lua",      "sh" }, -- E7 Rocher
+    { "sang_sorts/sp_elem_geyser.lua",    "sh" }, -- E8 Geyser
+    { "sang_sorts/sp_elem_sphere.lua",    "sh" }, -- E9 Sphère des Éléments
+    -- Nouveaux sorts Druidiques (vert) :
+    { "sang_sorts/sp_druid_thorns.lua",   "sh" }, -- D1 Ronces
+    { "sang_sorts/sp_druid_regen.lua",    "sh" }, -- D3 Régénération
+    { "sang_sorts/sp_druid_bark.lua",     "sh" }, -- D5 Épines
+    { "sang_sorts/sp_druid_spores.lua",   "sh" }, -- D6 Spores Toxiques
+    { "sang_sorts/sp_druid_symbiose.lua", "sh" }, -- D9 Symbiose (lien de soin)
     { "sang_sorts/cl_fx.lua",           "cl" }, -- effets d'écran (aveuglement)
     { "sang_sorts/cl_hide.lua",         "cl" }, -- masque les sorts vanilla (client)
 }

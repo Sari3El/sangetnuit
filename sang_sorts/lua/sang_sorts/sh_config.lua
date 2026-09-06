@@ -149,6 +149,40 @@ C.NecFly       = { Mana = 35, Cooldown = 16, Duration = 7, Speed = 2400, SprintS
 C.NecServant   = { Mana = 45, Cooldown = 25, NPC = "drg_roach_ds1_h", CorpseAge = 30,
                    CorpseDist = 160, Life = 25 }
 
+----------------------------------------------------------------------
+-- NOUVEAUX SORTS Élémentaire (orange) & Druidique (vert).
+----------------------------------------------------------------------
+C.ColElem  = Color(255, 140, 30)    -- orange/ambre
+C.ColDruid = Color(90, 200, 80)     -- vert nature
+
+-- E1 Éclair en Chaîne : foudre qui saute de cible en cible.
+C.ElemChain   = { Mana = 25, Cooldown = 8, Damage = 25, Bounces = 3, JumpRange = 360, Falloff = 0.7, Range = 1500 }
+-- E2 Pic de Glace : projectile qui gèle/ralentit.
+C.ElemIce     = { Mana = 20, Cooldown = 6, Speed = 2600, Damage = 20, SlowFactor = 0.35, SlowDur = 4 }
+-- E4 Mur de Feu : ligne de flammes au sol.
+C.ElemWall    = { Mana = 40, Cooldown = 14, Length = 320, Segments = 5, Radius = 75, Dps = 6, Duration = 6 }
+-- E5 Météore : chute au point visé -> grosse explosion + feu.
+C.ElemMeteor  = { Mana = 45, Cooldown = 16, Radius = 230, Damage = 55, Height = 1400, Speed = 2800 }
+-- E6 Foudre Fulgurante : projectile rapide + bref étourdissement.
+C.ElemBolt    = { Mana = 25, Cooldown = 9, Speed = 3300, Damage = 22, StunDur = 1 }
+-- E7 Rocher : gros projectile + fort recul.
+C.ElemRock    = { Mana = 25, Cooldown = 8, Speed = 2200, Damage = 30, Knockback = 950, Radius = 160 }
+-- E8 Geyser : jaillit du sol -> projette en l'air.
+C.ElemGeyser  = { Mana = 30, Cooldown = 10, Radius = 170, Damage = 10, Launch = 780 }
+-- E9 Sphère des Éléments : bulle de protection, invincible, off manuel/15s.
+C.ElemSphere  = { Mana = 45, Cooldown = 25, Duration = 15, Radius = 150, PushForce = 650 }
+
+-- D1 Ronces : zone qui immobilise + DoT.
+C.DruidThorns = { Mana = 35, Cooldown = 14, Radius = 240, RootDur = 3, Dps = 3, Duration = 5 }
+-- D3 Régénération : HoT sur soi ou un allié visé.
+C.DruidRegen  = { Mana = 25, Cooldown = 12, Hps = 4, Duration = 6, Range = 1300 }
+-- D5 Épines : renvoie une partie des dégâts subis.
+C.DruidBark   = { Mana = 30, Cooldown = 14, ReflectPct = 0.4, Duration = 6 }
+-- D6 Spores Toxiques : nuage de poison (dégâts seuls, pas de ralentissement).
+C.DruidSpores = { Mana = 35, Cooldown = 12, Radius = 240, Dps = 4, Duration = 6 }
+-- D9 Symbiose : lien de SOIN vers un allié (miroir du Drain de Vie).
+C.DruidSymb   = { Mana = 30, Cooldown = 12, Speed = 2600, Duration = 8, MaxLink = 800, Hps = 6 }
+
 -- Sort « Boule de Feu » (Élémentaire) : orbite -> lancée -> explosion
 C.Elementaire = {
     Mana        = 45, Cooldown = 10,

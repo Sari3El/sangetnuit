@@ -68,14 +68,34 @@ if SERVER then
             end
             self:NextThink(CurTime() + 0.1)
             return true
+
+        elseif self.SKind == "root" then
+            -- Ronces : re-immobilise (root court) + petit DoT tant qu'on est dedans.
+            if CurTime() >= self.NextTick then
+                self.NextTick = CurTime() + 0.5
+                for _, e in ipairs(ents.FindInSphere(pos, r)) do
+                    if living(e) and e ~= self.SOwner then
+                        if SANGSPELL.Root then SANGSPELL.Root(e, 0.7) end
+                        if SANGSPELL.DealDamage and (self.SAmount or 0) > 0 then
+                            SANGSPELL.DealDamage(self.SOwner, e, self.SAmount * 0.5, SANGSPELL.MAGIC, self)
+                        end
+                    end
+                end
+            end
+            self:NextThink(CurTime() + 0.1)
+            return true
         end
 
-        -- corrosion : dégâts magiques chaque seconde.
+        -- corrosion / fire / poison : dégâts chaque seconde (type selon le kind).
         if CurTime() >= self.NextTick then
             self.NextTick = CurTime() + 1
+            local dtype = SANGSPELL.MAGIC or DMG_SHOCK
+            if self.SKind == "fire" then dtype = DMG_BURN
+            elseif self.SKind == "poison" then dtype = DMG_POISON end
             for _, e in ipairs(ents.FindInSphere(pos, r)) do
                 if living(e) and e ~= self.SOwner and SANGSPELL.DealDamage then
-                    SANGSPELL.DealDamage(self.SOwner, e, self.SAmount, SANGSPELL.MAGIC or DMG_SHOCK, self)
+                    SANGSPELL.DealDamage(self.SOwner, e, self.SAmount, dtype, self)
+                    if self.SKind == "fire" and e.Ignite then e:Ignite(2) end
                 end
             end
         end

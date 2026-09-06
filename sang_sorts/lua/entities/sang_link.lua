@@ -16,6 +16,7 @@ ENT.RenderGroup = RENDERGROUP_TRANSLUCENT
 function ENT:SetupDataTables()
     self:NetworkVar("Entity", 0, "LinkOwner")
     self:NetworkVar("Entity", 1, "LinkTarget")
+    self:NetworkVar("Vector", 0, "LinkColor")
 end
 
 if SERVER then
@@ -28,15 +29,21 @@ if SERVER then
         self:NextThink(CurTime())
     end
 
-    function ENT:SetupLink(owner, target, dur, maxDist, dps, healRatio)
+    -- opts = { dur, maxDist, mode="drain"|"heal", dps, healRatio, hps, color }
+    function ENT:SetupLink(owner, target, opts)
+        opts = opts or {}
         self.SOwner    = owner
         self.STarget   = target
-        self.DieTime   = CurTime() + (dur or 6)
-        self.MaxDist   = maxDist or 700
-        self.Dps       = dps or 8
-        self.HealRatio = healRatio or 0.5
+        self.DieTime   = CurTime() + (opts.dur or 6)
+        self.MaxDist   = opts.maxDist or 700
+        self.Mode      = opts.mode or "drain"
+        self.Dps       = opts.dps or 8
+        self.HealRatio = opts.healRatio or 0.5
+        self.Hps       = opts.hps or 6
+        local col = opts.color or (self.Mode == "heal" and Color(90, 220, 110) or Color(200, 20, 30))
         self:SetLinkOwner(owner)
         self:SetLinkTarget(target)
+        self:SetLinkColor(Vector(col.r / 255, col.g / 255, col.b / 255))
     end
 
     local function alive(e)
@@ -49,9 +56,13 @@ if SERVER then
         if o:GetPos():Distance(t:GetPos()) > self.MaxDist then self:Remove() return end -- lien coupé
 
         local dt = 0.2
-        local dmg = self.Dps * dt
-        SANGSPELL.DealDamage(o, t, dmg, SANGSPELL.MAGIC or DMG_SHOCK, self)
-        if SANGSPELL.Heal then SANGSPELL.Heal(o, dmg * self.HealRatio) end
+        if self.Mode == "heal" then
+            if SANGSPELL.Heal then SANGSPELL.Heal(t, self.Hps * dt) end
+        else
+            local dmg = self.Dps * dt
+            SANGSPELL.DealDamage(o, t, dmg, SANGSPELL.MAGIC or DMG_SHOCK, self)
+            if SANGSPELL.Heal then SANGSPELL.Heal(o, dmg * self.HealRatio) end
+        end
 
         self:SetPos((o:WorldSpaceCenter() + t:WorldSpaceCenter()) * 0.5)
         self:NextThink(CurTime() + dt)
@@ -61,7 +72,6 @@ end
 
 if CLIENT then
     local beam = Material("trails/laser.vmt")
-    local col  = Color(200, 20, 30)
 
     function ENT:Initialize()
         self:SetRenderBounds(-Vector(1024, 1024, 1024), Vector(1024, 1024, 1024))
@@ -71,9 +81,10 @@ if CLIENT then
     function ENT:DrawTranslucent()
         local o, t = self:GetLinkOwner(), self:GetLinkTarget()
         if not (IsValid(o) and IsValid(t)) then return end
+        local c = self:GetLinkColor()
         local a, b = o:WorldSpaceCenter(), t:WorldSpaceCenter()
         render.SetMaterial(beam)
         render.DrawBeam(a, b, 10, 0, a:Distance(b) / 40,
-            Color(col.r, col.g, col.b, 200 + 40 * math.sin(CurTime() * 12)))
+            Color(c.x * 255, c.y * 255, c.z * 255, 200 + 40 * math.sin(CurTime() * 12)))
     end
 end

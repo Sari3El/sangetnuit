@@ -232,6 +232,7 @@ if SERVER then
     SANGSPELL.MAGIC = DMG_SHOCK
 
     util.AddNetworkString("sang_blind") -- Nuée d'Ombres : assombrit l'écran
+    util.AddNetworkString("sang_chain") -- Éclair en Chaîne : tracé de la foudre
 
     --- Sacrifie des PV du lanceur (hémomancie). Renvoie false si trop bas.
     function SANGSPELL.SacrificeHP(ply, amount)
@@ -289,19 +290,31 @@ if SERVER then
         dur = dur or 3
         local id = "SangRoot_" .. ent:EntIndex()
 
+        -- Mémorise le MOVETYPE d'origine UNE SEULE FOIS (sinon un ré-root
+        -- capturerait MOVETYPE_NONE et figerait la cible pour toujours).
+        if ent.SangRootMV == nil then
+            ent.SangRootMV = ent:GetMoveType()
+        end
+
         if ent:IsPlayer() then
-            local mv = ent:GetMoveType()
             ent:Freeze(true)
             ent:SetMoveType(MOVETYPE_NONE)
             timer.Create(id, dur, 1, function()
-                if IsValid(ent) then ent:Freeze(false) ent:SetMoveType(mv or MOVETYPE_WALK) end
+                if IsValid(ent) then
+                    ent:Freeze(false)
+                    ent:SetMoveType(ent.SangRootMV or MOVETYPE_WALK)
+                end
+                if IsValid(ent) then ent.SangRootMV = nil end
             end)
         elseif ent:IsNPC() then
-            local mv = ent:GetMoveType()
             ent:SetMoveType(MOVETYPE_NONE)
             ent:NextThink(CurTime() + dur + 0.1)
             timer.Create(id, dur, 1, function()
-                if IsValid(ent) then ent:SetMoveType(mv or MOVETYPE_STEP) ent:NextThink(CurTime()) end
+                if IsValid(ent) then
+                    ent:SetMoveType(ent.SangRootMV or MOVETYPE_STEP)
+                    ent:NextThink(CurTime())
+                    ent.SangRootMV = nil
+                end
             end)
         end
     end
