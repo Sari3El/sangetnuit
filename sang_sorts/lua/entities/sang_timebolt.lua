@@ -29,10 +29,10 @@ if SERVER then
         self:SetNotSolid(true)
         self:SetMoveType(MOVETYPE_NONE)
         self.Phase  = "fly"
-        self.Speed  = 1400
+        self.Speed  = 2600
         self.Born   = CurTime()
         self.Frozen = {}
-        self:SetNextThink(CurTime())
+        self:NextThink(CurTime())
     end
 
     function ENT:SetupBolt(owner, dir, radius, stunDur, flyP, zoneP, sound)
@@ -57,7 +57,7 @@ if SERVER then
                 self:SetPos(nxt)
                 if CurTime() - self.Born > 6 then self:Remove() return end
             end
-            self:SetNextThink(CurTime())
+            self:NextThink(CurTime())
             return true
         elseif self.Phase == "zone" then
             self:FreezeZone()
@@ -65,7 +65,7 @@ if SERVER then
                 self:Remove()
                 return
             end
-            self:SetNextThink(CurTime() + 0.1)
+            self:NextThink(CurTime() + 0.1)
             return true
         end
     end

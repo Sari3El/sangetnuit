@@ -33,45 +33,59 @@ do
 end
 
 ----------------------------------------------------------------------
--- Résolution du nom EXACT d'un système de particule.
+-- Résolution + enregistrement d'un système de particule.
 --   Beaucoup de packs nomment leurs systèmes « [N]_nom » (N = index).
---   Si on ne connaît pas N, on donne juste « nom » et on le retrouve en
---   lisant les .pcf (le nom du système y est stocké en clair).
---   Renvoie le nom exact (« [N]_nom ») si trouvé, sinon le nom tel quel.
+--   On construit UNE FOIS un index { nom_système -> fichier.pcf } en lisant
+--   tous les .pcf (le nom est stocké en clair dedans), puis :
+--     - on résout la base « nom » vers le nom exact « [N]_nom » ;
+--     - on ENREGISTRE le .pcf qui le contient (game.AddParticles) — sinon
+--       la particule ne s'affiche pas même avec le bon nom.
+--   Renvoie le nom exact (ou le nom tel quel si introuvable).
 ----------------------------------------------------------------------
 do
-    local cache = {}
-    function SANGSPELL.ResolveParticle(base)
-        if not base or base == "" then return base end
-        -- Déjà un nom exact (contient un préfixe [..]) → tel quel.
-        if string.find(base, "^%[") then return base end
-        if cache[base] ~= nil then return cache[base] end
+    local index                 -- nom_système -> "particles/x.pcf"
+    local registered = {}       -- fichiers déjà passés à game.AddParticles
+    local resolveCache = {}
 
-        -- Cherche « [N]_base » (exactement base, sans suffixe) dans les .pcf.
-        -- On regarde d'abord cruel_base*, puis tous les .pcf.
-        local pat = "%[%d+%]_" .. string.PatternSafe(base)
-        local function scan(files)
-            for _, v in ipairs(files or {}) do
-                local data = file.Read("particles/" .. v, "GAME")
-                if data then
-                    local s, e, hit = string.find(data, "(" .. pat .. ")")
-                    while s do
-                        local after = string.sub(data, e + 1, e + 1)
-                        -- Le nom doit se terminer là (pas « base_autre »).
-                        if not string.match(after, "[%w_]") then
-                            return hit
-                        end
-                        s, e, hit = string.find(data, "(" .. pat .. ")", e + 1)
-                    end
+    local function buildIndex()
+        index = {}
+        for _, v in ipairs(file.Find("particles/*.pcf", "GAME") or {}) do
+            local path = "particles/" .. v
+            local data = file.Read(path, "GAME")
+            if data then
+                -- Capture tous les noms « [N]_xxx » présents dans le fichier.
+                for nm in string.gmatch(data, "%[%d+%]_[%w_]+") do
+                    if not index[nm] then index[nm] = path end
                 end
             end
         end
+    end
 
-        local found = scan(file.Find("particles/cruel_base*.pcf", "GAME"))
-        if not found then found = scan(file.Find("particles/*.pcf", "GAME")) end
+    local function register(path)
+        if path and not registered[path] and file.Exists(path, "GAME") then
+            game.AddParticles(path)
+            if SERVER then resource.AddFile(path) end
+            registered[path] = true
+        end
+    end
 
-        cache[base] = found or base
-        return cache[base]
+    function SANGSPELL.ResolveParticle(name)
+        if not name or name == "" then return name end
+        if resolveCache[name] ~= nil then return resolveCache[name] end
+        if not index then buildIndex() end
+
+        local exact = name
+        if not string.find(name, "^%[") then
+            -- Base « nom » → cherche « [N]_nom » exact dans l'index.
+            local want = "^%[%d+%]_" .. string.PatternSafe(name) .. "$"
+            for k in pairs(index) do
+                if string.match(k, want) then exact = k break end
+            end
+        end
+
+        register(index[exact])          -- charge le .pcf qui le contient
+        resolveCache[name] = exact
+        return exact
     end
 end
 
@@ -83,19 +97,37 @@ function SANGSPELL.PrepareSpell(Spell, opts)
     Spell.CreateEntity = false            -- pas de livre (nom accentué OK)
     Spell.LearnTime   = 0
     Spell.Category    = opts.category or "Magie Sacré"
-    Spell.ForceDelay  = opts.cooldown or 5
+    -- IMPORTANT : on N'UTILISE PAS ForceDelay de HPW car c'est un délai GLOBAL
+    -- sur la baguette (il bloque TOUS les sorts). On gère un cooldown PAR SORT
+    -- nous-mêmes (ci-dessous, dans PreFire). Il reste juste le petit délai
+    -- d'animation de la baguette entre deux lancers.
+    Spell.SangCooldown = opts.cooldown or 5
     Spell.ManaCost    = opts.mana or 0
     if opts.color then Spell.SpriteColor = opts.color end
     if opts.whatToSay ~= nil then Spell.WhatToSay = opts.whatToSay end
     if opts.icon then Spell.IconMat = Material(opts.icon, "noclamp smooth") end
     if Spell.CanSelfCast == nil then Spell.CanSelfCast = false end
 
-    -- Débit de la mana avant l'effet (serveur). Conserve un PreFire déjà défini.
+    -- Gate avant l'effet (serveur) : cooldown PAR SORT puis débit de mana.
+    -- Conserve un PreFire déjà défini par le sort.
     local userPre = rawget(Spell, "PreFire")
     function Spell:PreFire(wand)
         if SERVER then
             local ply = self.Owner
             if not IsValid(ply) then return false end
+
+            -- 1) Cooldown propre à CE sort (n'affecte pas les autres sorts).
+            ply.SangSpellCD = ply.SangSpellCD or {}
+            local ready = ply.SangSpellCD[self.Name] or 0
+            if CurTime() < ready then
+                local left = math.max(1, math.ceil(ready - CurTime()))
+                if BLOOD and BLOOD.Notify then
+                    BLOOD.Notify(ply, (self.WhatToSay or self.Name) .. " en recharge (" .. left .. "s).", "error")
+                else ply:ChatPrint("[Sang] Sort en recharge (" .. left .. "s).") end
+                return false
+            end
+
+            -- 2) Mana (débitée seulement si pas en recharge).
             local cost = self.ManaCost or 0
             if cost > 0 and BLOOD and BLOOD.TakeMana then
                 if not BLOOD.TakeMana(ply, cost) then
@@ -104,6 +136,9 @@ function SANGSPELL.PrepareSpell(Spell, opts)
                     return false
                 end
             end
+
+            -- 3) Arme le cooldown de ce sort (le lancer va avoir lieu).
+            ply.SangSpellCD[self.Name] = CurTime() + (self.SangCooldown or 0)
         end
         if userPre then return userPre(self, wand) end
         return true

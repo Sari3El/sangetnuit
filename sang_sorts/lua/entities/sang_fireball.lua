@@ -27,7 +27,7 @@ if SERVER then
         self:SetMoveType(MOVETYPE_NONE)
         self.Phase = "orbit"
         self.Born  = CurTime()
-        self:SetNextThink(CurTime())
+        self:NextThink(CurTime())
     end
 
     function ENT:SetupFireball(owner, radius, dmg, orbitTime, maxFly, flyP, boomP, sound)
@@ -38,7 +38,7 @@ if SERVER then
         self.MaxFly    = maxFly or 10
         self.BoomP     = boomP
         self.Sound     = sound
-        self.Speed     = 1200
+        self.Speed     = 2000
         self:SetFlyParticle(flyP or "")
     end
 
@@ -63,7 +63,7 @@ if SERVER then
                 self.Dir     = self.SOwner:GetAimVector():GetNormalized()
                 self.FlyStart = CurTime()
             end
-            self:SetNextThink(CurTime())
+            self:NextThink(CurTime())
             return true
         elseif self.Phase == "fly" then
             local pos = self:GetPos()
@@ -72,7 +72,7 @@ if SERVER then
             if tr.Hit then self:Explode(tr.HitPos) return end
             self:SetPos(nxt)
             if CurTime() - self.FlyStart > self.MaxFly then self:Explode(self:GetPos()) return end
-            self:SetNextThink(CurTime())
+            self:NextThink(CurTime())
             return true
         end
     end

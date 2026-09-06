@@ -14,6 +14,10 @@ local C = (SANGSPELL.Config and SANGSPELL.Config.Elementaire) or {
     Sound = "ambient/explosions/explode_4.wav",
 }
 
+if SANGSPELL.ResolveParticle then
+    C.FlyParticle  = SANGSPELL.ResolveParticle(C.FlyParticle)
+    C.BoomParticle = SANGSPELL.ResolveParticle(C.BoomParticle)
+end
 PrecacheParticleSystem(C.FlyParticle)
 PrecacheParticleSystem(C.BoomParticle)
 

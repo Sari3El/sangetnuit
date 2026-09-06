@@ -13,6 +13,7 @@ local C = (SANGSPELL.Config and SANGSPELL.Config.Necrotique) or {
     Particle = "[5]_cursed_lake", Sound = "ambient/atmosphere/cave_hit1.wav",
 }
 
+if SANGSPELL.ResolveParticle then C.Particle = SANGSPELL.ResolveParticle(C.Particle) end
 PrecacheParticleSystem(C.Particle)
 
 local Spell = { }

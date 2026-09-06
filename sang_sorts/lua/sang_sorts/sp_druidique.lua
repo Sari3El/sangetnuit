@@ -12,6 +12,7 @@ local C = (SANGSPELL.Config and SANGSPELL.Config.Druidique) or {
     Particle = "[3]_healing_zone", Sound = "items/smallmedkit1.wav",
 }
 
+if SANGSPELL.ResolveParticle then C.Particle = SANGSPELL.ResolveParticle(C.Particle) end
 PrecacheParticleSystem(C.Particle)
 
 local Spell = { }

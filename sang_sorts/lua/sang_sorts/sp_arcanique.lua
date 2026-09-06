@@ -18,6 +18,12 @@ local C = (SANGSPELL.Config and SANGSPELL.Config.Translocation) or {
     Sound = "ambient/machines/teleport4.wav",
 }
 
+-- Résout « strange_portal » -> « [N]_strange_portal » ET enregistre le .pcf
+-- qui le contient (sur le serveur ET le client, car chargé en "sh").
+if SANGSPELL.ResolveParticle then
+    C.Portal = SANGSPELL.ResolveParticle(C.Portal or "strange_portal")
+end
+
 local Spell = { }
 Spell.NodeOffset = Vector(-900, 0, 0)
 Spell.Description = [[
@@ -66,8 +72,8 @@ function Spell:OnFire(wand)
         dest = dest + tr.HitNormal * 20 + Vector(0, 0, 8)
     end
 
-    -- Nom exact du système de particule du portail (résout « [N]_ »).
-    local part = SANGSPELL.ResolveParticle and SANGSPELL.ResolveParticle(C.Portal or "strange_portal") or (C.Portal or "strange_portal")
+    -- Nom exact du système de particule du portail (déjà résolu au chargement).
+    local part = C.Portal or "strange_portal"
     local life = C.CloseDelay or 2
     local yaw  = ply:EyeAngles().y
     local pang = Angle(0, yaw, 0)

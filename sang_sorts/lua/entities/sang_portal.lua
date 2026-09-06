@@ -42,6 +42,9 @@ if CLIENT then
         if not self.Att then
             local p = self:GetPortalParticle()
             if p and p ~= "" then
+                -- Garantit que le .pcf du portail est bien enregistré côté
+                -- client (et résout « [N]_ » au cas où).
+                if SANGSPELL and SANGSPELL.ResolveParticle then p = SANGSPELL.ResolveParticle(p) end
                 ParticleEffectAttach(p, PATTACH_ABSORIGIN_FOLLOW, self, 0)
                 self.Att = true
             end

@@ -28,7 +28,7 @@ if SERVER then
         local phys = self:GetPhysicsObject()
         if IsValid(phys) then phys:EnableMotion(false) end
         self.NextTick = 0
-        self:SetNextThink(CurTime())
+        self:NextThink(CurTime())
     end
 
     -- kind : "heal" | "curse"
@@ -65,7 +65,7 @@ if SERVER then
                 end
             end
         end
-        self:SetNextThink(CurTime() + 0.1)
+        self:NextThink(CurTime() + 0.1)
         return true
     end
 end
