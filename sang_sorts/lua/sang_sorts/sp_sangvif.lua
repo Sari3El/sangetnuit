@@ -14,10 +14,21 @@ end
 SANGSPELL = SANGSPELL or {}
 local CFG = (SANGSPELL.Config and SANGSPELL.Config.SangVif) or {
     ManaCost = 25, Cooldown = 5, Duration = 15, SpeedMul = 1.5, JumpMul = 1.5,
-    Aura = "golden_energy", CastSound = "items/suitchargeok1.wav", EndSound = "items/suitchargeno1.wav",
+    Aura = "[4]_golden_energy", AuraPcf = "particles/cruel_base2.pcf",
+    CastSound = "items/suitchargeok1.wav", EndSound = "items/suitchargeno1.wav",
 }
-local AURA = CFG.Aura or "golden_energy"
+local AURA = CFG.Aura or "[4]_golden_energy"
+local AURA_PCF = CFG.AuraPcf or "particles/cruel_base2.pcf"
 
+-- Enregistre le pack de particules qui contient l'aura (les 2 réalmes) puis
+-- précharge le système. game.AddParticles doit être appelé avant l'usage.
+if AURA_PCF and file.Exists(AURA_PCF, "GAME") then
+    game.AddParticles(AURA_PCF)
+    if SERVER then resource.AddFile(AURA_PCF) end -- au cas où c'est du contenu serveur
+else
+    MsgN("[Sang Sorts] Fichier de particule introuvable : " .. tostring(AURA_PCF)
+        .. " (abonne-toi à l'addon workshop qui le contient).")
+end
 PrecacheParticleSystem(AURA)
 
 ----------------------------------------------------------------------
