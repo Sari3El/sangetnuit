@@ -24,10 +24,21 @@ PrecacheParticleSystem(AURA)
 -- Application / fin du buff (serveur)
 ----------------------------------------------------------------------
 if SERVER then
+    -- Stoppe l'aura de façon robuste (StopParticlesNamed n'existe pas partout).
+    local function stopAura(ply)
+        if not IsValid(ply) then return end
+        if ply.StopParticlesNamed then
+            ply:StopParticlesNamed(AURA)
+        elseif ply.StopParticles then
+            ply:StopParticles() -- repli : stoppe toutes les particules du joueur
+        end
+    end
+    SANGSPELL.StopAura = stopAura
+
     function SANGSPELL.EndSangVif(ply)
         if not IsValid(ply) or not ply.SangVifActive then return end
         ply.SangVifActive = false
-        ply:StopParticlesNamed(AURA)
+        stopAura(ply)
         if not ply:Alive() then return end
         -- Restaure les vitesses/saut d'avant le buff.
         if BLOOD and BLOOD.ApplyComputedStats then
@@ -56,7 +67,7 @@ if SERVER then
         ply:SetJumpPower(math.Round((ply.SangVifBaseJump or 200) * (CFG.JumpMul or 1.5)))
 
         -- Aura dorée autour du joueur (réseau auto vers les clients).
-        ply:StopParticlesNamed(AURA)
+        stopAura(ply)
         ParticleEffectAttach(AURA, PATTACH_ABSORIGIN_FOLLOW, ply, 0)
         if CFG.CastSound then ply:EmitSound(CFG.CastSound) end
 
@@ -72,7 +83,7 @@ if SERVER then
             ply.SangVifActive = false
             timer.Remove("sangvif_" .. ply:EntIndex())
         end
-        ply:StopParticlesNamed(AURA)
+        stopAura(ply)
     end)
 end
 
