@@ -1,6 +1,8 @@
 --[[-------------------------------------------------------------------------
     Sang et Nuit — Sort « Translocation »  (Magie Arcanique)
       Téléportation là où tu regardes (inspiré d'Obscuratio/Apparition).
+      Un PORTAIL s'ouvre à l'entrée (ancienne position) ET à la sortie
+      (destination) au moment du lancer, puis se referme après CloseDelay s.
       Mana + cooldown. Pas de dégâts.
 ---------------------------------------------------------------------------]]
 
@@ -12,18 +14,30 @@ end
 SANGSPELL = SANGSPELL or {}
 local C = (SANGSPELL.Config and SANGSPELL.Config.Translocation) or {
     Mana = 15, Cooldown = 6, MaxDist = 2500,
-    Particle = "hpw_apparation_black",
+    Portal = "strange_portal", CloseDelay = 2,
     Sound = "ambient/machines/teleport4.wav",
 }
-
-PrecacheParticleSystem(C.Particle)
 
 local Spell = { }
 Spell.NodeOffset = Vector(-900, 0, 0)
 Spell.Description = [[
-	Translocation : tu te téléportes
-	instantanément là où tu regardes.
+	Translocation : tu te téléportes là où
+	tu regardes. Un portail s'ouvre à
+	l'entrée et à la sortie, puis se
+	referme.
 ]]
+
+-- Fait apparaître un portail (visuel) à pos, refermé après CloseDelay s.
+local function SpawnPortal(pos, ang, particle, life)
+    local p = ents.Create("sang_portal")
+    if not IsValid(p) then return end
+    p:SetPos(pos)
+    p:SetAngles(ang or Angle(0, 0, 0))
+    p:Spawn()
+    p:Activate()
+    p:SetupPortal(particle, life)
+    return p
+end
 
 function Spell:OnFire(wand)
     if not SERVER then return false end
@@ -52,15 +66,27 @@ function Spell:OnFire(wand)
         dest = dest + tr.HitNormal * 20 + Vector(0, 0, 8)
     end
 
-    local from = ply:GetPos() + Vector(0, 0, 36)
-    ParticleEffect(C.Particle, from, Angle(0, 0, 0))
-    ply:EmitSound(C.Sound, 70, math.random(95, 108))
+    -- Nom exact du système de particule du portail (résout « [N]_ »).
+    local part = SANGSPELL.ResolveParticle and SANGSPELL.ResolveParticle(C.Portal or "strange_portal") or (C.Portal or "strange_portal")
+    local life = C.CloseDelay or 2
+    local yaw  = ply:EyeAngles().y
+    local pang = Angle(0, yaw, 0)
+
+    local from = ply:GetPos()
+    -- Portail d'ENTRÉE (là où le joueur était) + portail de SORTIE.
+    SpawnPortal(from + Vector(0, 0, 36), pang, part, life)
+    SpawnPortal(dest + Vector(0, 0, 36), pang, part, life)
+
+    if C.Sound then ply:EmitSound(C.Sound, 72, math.random(96, 106)) end
 
     ply:SetPos(dest)
     ply:SetVelocity(-ply:GetVelocity()) -- coupe l'élan pour ne pas glisser
 
-    ParticleEffect(C.Particle, dest + Vector(0, 0, 36), Angle(0, 0, 0))
-    ply:EmitSound(C.Sound, 70, math.random(95, 108))
+    if C.Sound then
+        timer.Simple(0, function()
+            if IsValid(ply) then ply:EmitSound(C.Sound, 72, math.random(96, 106)) end
+        end)
+    end
 
     return false
 end

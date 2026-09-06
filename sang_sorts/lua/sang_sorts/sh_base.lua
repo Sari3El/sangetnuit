@@ -13,6 +13,68 @@
 
 SANGSPELL = SANGSPELL or {}
 
+----------------------------------------------------------------------
+-- Enregistrement des packs de particules (.pcf) utilisés par nos sorts.
+--   - fichiers explicites : SANGSPELL.Config.ParticleFiles
+--   - auto-découverte : tous les particles/cruel_base*.pcf présents.
+--   game.AddParticles doit être appelé avant PrecacheParticleSystem/usage.
+----------------------------------------------------------------------
+do
+    local files = {}
+    for _, f in ipairs((SANGSPELL.Config and SANGSPELL.Config.ParticleFiles) or {}) do files[f] = true end
+    local found = file.Find("particles/cruel_base*.pcf", "GAME")
+    if istable(found) then for _, v in ipairs(found) do files["particles/" .. v] = true end end
+    for f in pairs(files) do
+        if file.Exists(f, "GAME") then
+            game.AddParticles(f)
+            if SERVER then resource.AddFile(f) end
+        end
+    end
+end
+
+----------------------------------------------------------------------
+-- Résolution du nom EXACT d'un système de particule.
+--   Beaucoup de packs nomment leurs systèmes « [N]_nom » (N = index).
+--   Si on ne connaît pas N, on donne juste « nom » et on le retrouve en
+--   lisant les .pcf (le nom du système y est stocké en clair).
+--   Renvoie le nom exact (« [N]_nom ») si trouvé, sinon le nom tel quel.
+----------------------------------------------------------------------
+do
+    local cache = {}
+    function SANGSPELL.ResolveParticle(base)
+        if not base or base == "" then return base end
+        -- Déjà un nom exact (contient un préfixe [..]) → tel quel.
+        if string.find(base, "^%[") then return base end
+        if cache[base] ~= nil then return cache[base] end
+
+        -- Cherche « [N]_base » (exactement base, sans suffixe) dans les .pcf.
+        -- On regarde d'abord cruel_base*, puis tous les .pcf.
+        local pat = "%[%d+%]_" .. string.PatternSafe(base)
+        local function scan(files)
+            for _, v in ipairs(files or {}) do
+                local data = file.Read("particles/" .. v, "GAME")
+                if data then
+                    local s, e, hit = string.find(data, "(" .. pat .. ")")
+                    while s do
+                        local after = string.sub(data, e + 1, e + 1)
+                        -- Le nom doit se terminer là (pas « base_autre »).
+                        if not string.match(after, "[%w_]") then
+                            return hit
+                        end
+                        s, e, hit = string.find(data, "(" .. pat .. ")", e + 1)
+                    end
+                end
+            end
+        end
+
+        local found = scan(file.Find("particles/cruel_base*.pcf", "GAME"))
+        if not found then found = scan(file.Find("particles/*.pcf", "GAME")) end
+
+        cache[base] = found or base
+        return cache[base]
+    end
+end
+
 --- Prépare un sort. opts = { category, mana, cooldown, color, icon, whatToSay }
 function SANGSPELL.PrepareSpell(Spell, opts)
     opts = opts or {}

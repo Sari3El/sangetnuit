@@ -14,6 +14,10 @@ local MODULES = {
     -- Sorts (un fichier par sort) :
     { "sang_sorts/sp_renforcement.lua", "sh" }, -- Magie Sacré
     { "sang_sorts/sp_arcanique.lua",    "sh" }, -- Magie Arcanique (téléportation)
+    { "sang_sorts/sp_druidique.lua",    "sh" }, -- Magie Druidique (soin de zone)
+    { "sang_sorts/sp_necrotique.lua",   "sh" }, -- Magie Nécrotique (dégâts de zone)
+    { "sang_sorts/sp_temporelle.lua",   "sh" }, -- Magie Temporelle (stop-time)
+    { "sang_sorts/sp_elementaire.lua",  "sh" }, -- Magie Élémentaire (boule de feu)
     { "sang_sorts/cl_hide.lua",         "cl" }, -- masque les sorts vanilla (client)
 }
 
