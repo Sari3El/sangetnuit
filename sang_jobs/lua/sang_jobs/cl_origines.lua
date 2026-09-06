@@ -80,79 +80,22 @@ local function buildConfigPerso(f)
         net.SendToServer()
     end
 
-    -- 2) Override PV / Armure / Vitesse
-    sectionLabel(body, "2)  Override PV / Armure / Vitesse  (par joueur + job)")
-    local rowJob = vgui.Create("DPanel", body)
-    rowJob:Dock(TOP) rowJob:DockMargin(0, S(2), S(6), S(4)) rowJob:SetTall(S(26)) rowJob.Paint = function() end
-    fieldLabel(rowJob, "")
-    local jobCombo2 = jobCombo(rowJob)
-    jobCombo2:Dock(FILL)
+    -- Le menu déroulant des joueurs connectés remplit le SteamID cible.
+    combo.OnSelect = function(_, _, _, data) sidEntry:SetText(data or "") end
 
-    local infoLbl = vgui.Create("DLabel", body)
-    infoLbl:Dock(TOP) infoLbl:DockMargin(0, S(2), S(6), S(4)) infoLbl:SetTall(S(20))
-    infoLbl:SetFont("SangUI_Small") infoLbl:SetTextColor(C.goldLt)
-    infoLbl:SetText("Défaut job : —")
-    cfg.infoLbl = infoLbl
-
-    local function field(label)
-        local r = vgui.Create("DPanel", body)
-        r:Dock(TOP) r:DockMargin(0, 0, S(6), S(4)) r:SetTall(S(26)) r.Paint = function() end
-        local l = vgui.Create("DLabel", r)
-        l:Dock(LEFT) l:SetWide(S(200)) l:SetFont("SangUI_Small") l:SetTextColor(C.txt) l:SetText(label)
-        local e = vgui.Create("DTextEntry", r)
-        e:Dock(FILL) UI.SkinEntry(e)
-        e:SetPlaceholderText("(vide = défaut du job)")
-        return e
-    end
-    cfg.hp    = field("PV override :")
-    cfg.armor = field("Armure override :")
-    cfg.speed = field("Vitesse override (ex. 0.95) :")
-
-    local function queryOverride()
-        local sid = string.Trim(sidEntry:GetValue() or "")
-        if sid == "" then return end
-        local _, jobId = jobCombo2:GetSelected()
-        net.Start("sjob_query")
-        net.WriteString(sid)
-        net.WriteString(jobId or "sansfaction")
-        net.SendToServer()
-    end
-    jobCombo2.OnSelect = function() queryOverride() end
-    sidEntry.OnValueChange = function() queryOverride() end
-    combo.OnSelect = function(_, _, _, data) sidEntry:SetText(data or "") queryOverride() end
-
-    local rowBtns = vgui.Create("DPanel", body)
-    rowBtns:Dock(TOP) rowBtns:DockMargin(0, S(2), S(6), S(6)) rowBtns:SetTall(S(30)) rowBtns.Paint = function() end
-    local saveBtn = vgui.Create("DButton", rowBtns)
-    saveBtn:Dock(LEFT) saveBtn:SetWide(S(240)) saveBtn:SetText("Enregistrer l'override")
-    UI.SkinButton(saveBtn, "gold")
-    saveBtn.DoClick = function()
-        local _, jobId = jobCombo2:GetSelected()
-        local function parseInt(e) local v = string.Trim(e:GetValue() or "") if v == "" then return -1 end return math.floor(tonumber(v) or -1) end
-        local function parseFloat(e) local v = string.Trim(e:GetValue() or "") if v == "" then return -1 end return tonumber(v) or -1 end
-        net.Start("sjob_admin_setoverride")
-        net.WriteString(sidEntry:GetValue() or "")
-        net.WriteString(jobId or "sansfaction")
-        net.WriteInt(parseInt(cfg.hp), 32)
-        net.WriteInt(parseInt(cfg.armor), 32)
-        net.WriteFloat(parseFloat(cfg.speed))
-        net.SendToServer()
-        timer.Simple(0.15, queryOverride)
-    end
-    local clearBtn = vgui.Create("DButton", rowBtns)
-    clearBtn:Dock(FILL) clearBtn:DockMargin(S(8), 0, 0, 0) clearBtn:SetText("Effacer l'override")
-    UI.SkinButton(clearBtn, "blood")
-    clearBtn.DoClick = function()
-        local _, jobId = jobCombo2:GetSelected()
-        net.Start("sjob_admin_clearoverride")
-        net.WriteString(sidEntry:GetValue() or "")
-        net.WriteString(jobId or "sansfaction")
-        net.SendToServer()
-        timer.Simple(0.15, queryOverride)
-    end
+    -- 2) Stats forcées : déplacé dans « Gestion Joueurs » (override direct,
+    --    par slot, qui remplace tout et s'applique QUEL QUE SOIT le job).
+    sectionLabel(body, "2)  Stats forcées (PV / Armure / Vitesse)")
+    local note = vgui.Create("DLabel", body)
+    note:Dock(TOP) note:DockMargin(0, S(2), S(6), S(6))
+    note:SetWrap(true) note:SetAutoStretchVertical(true)
+    note:SetFont("SangUI_Small") note:SetTextColor(C.goldLt)
+    note:SetText("Pour forcer les PV / Armure / Vitesse d'un joueur : Origines -> "
+        .. "« Gestion Joueurs » -> section « Stats forcées du perso (par slot) ». "
+        .. "Ces valeurs remplacent tout (job, race, niveau) et s'appliquent quel "
+        .. "que soit le job du personnage.")
 end
 
-table.insert(BLOOD.Origines.pages, {
-    id = "configperso", label = "Config Perso", order = 3, kind = "gold",
-    build = buildConfigPerso,
-})
+-- Enregistrement idempotent (évite un doublon au rechargement du fichier).
+local addPage = BLOOD.Origines.AddPage or function(t) table.insert(BLOOD.Origines.pages, t) end
+addPage({ id = "configperso", label = "Config Perso", order = 3, kind = "gold", build = buildConfigPerso })

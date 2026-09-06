@@ -189,6 +189,21 @@ function BLOOD.ApplyComputedStats(ply, fullHeal)
     local s = BLOOD.ComputeStats(ply)
 
     local maxhp = math.max(1, math.Round(s.baseHP * s.hpMul))
+    local armor = math.max(0, math.floor(s.armor))
+    local walk  = math.max(1, math.Round(s.baseWalk * s.speedMul))
+    local run   = math.max(1, math.Round(s.baseRun * s.speedMul))
+
+    -- Stats FORCÉES par (joueur, slot) : remplacent les valeurs finales
+    -- (au-dessus de job/race/niveau). Vide = automatique.
+    local ov = BLOOD.SQL.GetStatOverride
+        and BLOOD.SQL.GetStatOverride(ply:SteamID64(), ply.BloodActiveSlot or 1) or {}
+    if ov.hp then maxhp = math.max(1, math.floor(ov.hp)) end
+    if ov.armor then armor = math.max(0, math.floor(ov.armor)) end
+    if ov.speed then
+        walk = math.max(1, math.Round(s.baseWalk * ov.speed))
+        run  = math.max(1, math.Round(s.baseRun * ov.speed))
+    end
+
     local oldMax, oldHP = ply:GetMaxHealth(), ply:Health()
     ply:SetMaxHealth(maxhp)
     if fullHeal then
@@ -197,12 +212,10 @@ function BLOOD.ApplyComputedStats(ply, fullHeal)
         ply:SetHealth(math.min(maxhp, oldHP + math.max(0, maxhp - oldMax)))
     end
 
-    local armor = math.max(0, math.floor(s.armor))
     ply:SetArmor(armor)
     ply:SetMaxArmor(armor > 0 and armor or 100)
-
-    ply:SetWalkSpeed(math.max(1, math.Round(s.baseWalk * s.speedMul)))
-    ply:SetRunSpeed(math.max(1, math.Round(s.baseRun * s.speedMul)))
+    ply:SetWalkSpeed(walk)
+    ply:SetRunSpeed(run)
 
     if C.EnforceDefaultJump then ply:SetJumpPower(C.DefaultJumpPower) end
 end

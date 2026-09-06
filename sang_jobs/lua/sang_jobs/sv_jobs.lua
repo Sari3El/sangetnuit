@@ -12,16 +12,12 @@ local function notify(ply, msg, kind)
     if BLOOD and BLOOD.Notify then BLOOD.Notify(ply, msg, kind) else ply:ChatPrint("[Job] " .. msg) end
 end
 
---- Données de job appliquées à un joueur (job + override perso).
+--- Données de job appliquées à un joueur (base du job).
+--  Les stats forcées PAR PERSO sont gérées côté cœur (BLOOD, par slot),
+--  au-dessus de tout — voir Origines > Gestion Joueurs > « Stats forcées ».
 function SJOB.GetJobData(ply)
     local base = SJOB.GetJob(ply.SJob or C.DefaultJob)
-    local ov = SJOB.SQL.GetOverride(ply:SteamID64(), base.id)
-    return {
-        id    = base.id,
-        hp    = ov.hp    or base.hp,
-        armor = ov.armor or base.armor,
-        speed = ov.speed or base.speed,
-    }
+    return { id = base.id, hp = base.hp, armor = base.armor, speed = base.speed }
 end
 
 --- Contribution au point d'assemblage : le job pose la base.

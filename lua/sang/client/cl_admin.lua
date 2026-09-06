@@ -15,10 +15,24 @@ local UI = BLOOD.UI
 local C = UI.Col
 local S = UI.Scale
 
--- Registre d'extensions (ordre-indépendant entre addons)
+-- Registre d'extensions (ordre-indépendant entre addons).
+-- Un `id` optionnel rend l'ajout IDEMPOTENT : si le fichier est rechargé
+-- (auto-refresh, réinstallation), la section est remplacée au lieu d'être
+-- dupliquée (fini le double « Multiplicateur d'XP »).
 BLOOD.Origines = BLOOD.Origines or { playerSections = {}, serverSections = {} }
-function BLOOD.Origines.AddPlayerSection(fn) table.insert(BLOOD.Origines.playerSections, fn) end
-function BLOOD.Origines.AddServerSection(fn) table.insert(BLOOD.Origines.serverSections, fn) end
+BLOOD.Origines._playerIds = BLOOD.Origines._playerIds or {}
+BLOOD.Origines._serverIds = BLOOD.Origines._serverIds or {}
+
+local function addSection(list, ids, fn, id)
+    if id and ids[id] then
+        list[ids[id]] = fn
+        return
+    end
+    table.insert(list, fn)
+    if id then ids[id] = #list end
+end
+function BLOOD.Origines.AddPlayerSection(fn, id) addSection(BLOOD.Origines.playerSections, BLOOD.Origines._playerIds, fn, id) end
+function BLOOD.Origines.AddServerSection(fn, id) addSection(BLOOD.Origines.serverSections, BLOOD.Origines._serverIds, fn, id) end
 
 ----------------------------------------------------------------------
 -- Helpers UI (réutilisables par les extensions)
@@ -57,6 +71,24 @@ local function makeScroll(parent)
     sbar.btnGrip.Paint = function(_, w, h) surface.SetDrawColor(C.goldDk); surface.DrawRect(0, 0, w, h) end
     return scroll
 end
+
+-- Valeurs actuelles des stats forcées (section « Stats forcées »)
+net.Receive("origines_statoverride_info", function()
+    local sid   = net.ReadString()
+    local slot  = net.ReadUInt(8)
+    local hp    = net.ReadInt(32)
+    local armor = net.ReadInt(32)
+    local speed = net.ReadFloat()
+    local f = BLOOD._soFields
+    if not (f and IsValid(f.info)) then return end
+    if IsValid(f.hp)    then f.hp:SetText(hp >= 0 and tostring(hp) or "") end
+    if IsValid(f.armor) then f.armor:SetText(armor >= 0 and tostring(armor) or "") end
+    if IsValid(f.speed) then f.speed:SetText(speed >= 0 and string.format("%.2f", speed) or "") end
+    f.info:SetText(("Actuel — slot %d : PV %s · Armure %s · Vitesse %s"):format(slot,
+        hp >= 0 and tostring(hp) or "auto",
+        armor >= 0 and tostring(armor) or "auto",
+        speed >= 0 and ("×" .. string.format("%.2f", speed)) or "auto"))
+end)
 
 -- Info live d'un slot (nom / race / covan) — section « Définir une race »
 net.Receive("origines_slot_info", function()
@@ -249,6 +281,80 @@ local function buildPlayerControls(body, races)
     addMoney:SetText("Ajouter / retirer")
     UI.SkinButton(addMoney, "default")
     addMoney.DoClick = function() sendCovan(true) end
+
+    -- 6) Stats forcées (par slot) — remplacent job / race / niveau
+    sectionLabel(body, "6)  Stats forcées du perso (par slot)  — remplacent job / race / niveau")
+    fieldLabel(body, "Vide = automatique.  PV / Armure = valeurs exactes ;  Vitesse = multiplicateur (ex. 1.3).")
+    local rowSO = vgui.Create("DPanel", body)
+    rowSO:Dock(TOP) rowSO:DockMargin(0, S(2), S(6), S(4)) rowSO:SetTall(S(26)) rowSO.Paint = function() end
+    local soSlot = vgui.Create("DComboBox", rowSO)
+    soSlot:Dock(LEFT) soSlot:SetWide(S(150)) UI.SkinCombo(soSlot)
+    for i = 1, BLOOD.Config.MaxSlots do soSlot:AddChoice("Slot " .. i, i) end
+    soSlot:ChooseOptionID(1)
+    local soLoad = vgui.Create("DButton", rowSO)
+    soLoad:Dock(FILL) soLoad:DockMargin(S(8), 0, 0, 0) soLoad:SetText("Charger les valeurs actuelles")
+    UI.SkinButton(soLoad, "default")
+
+    local function soField(label)
+        local r = vgui.Create("DPanel", body)
+        r:Dock(TOP) r:DockMargin(0, 0, S(6), S(4)) r:SetTall(S(26)) r.Paint = function() end
+        local l = vgui.Create("DLabel", r)
+        l:Dock(LEFT) l:SetWide(S(220)) l:SetFont("SangUI_Small") l:SetTextColor(C.txt) l:SetText(label)
+        local e = vgui.Create("DTextEntry", r)
+        e:Dock(FILL) UI.SkinEntry(e) e:SetPlaceholderText("(vide = auto)")
+        return e
+    end
+    local soHp    = soField("PV forcés :")
+    local soArmor = soField("Armure forcée :")
+    local soSpeed = soField("Vitesse forcée (×, ex. 1.3) :")
+
+    local soInfo = vgui.Create("DLabel", body)
+    soInfo:Dock(TOP) soInfo:DockMargin(0, S(2), S(6), S(4)) soInfo:SetTall(S(20))
+    soInfo:SetFont("SangUI_Small") soInfo:SetTextColor(C.goldLt) soInfo:SetText("Actuel — sélectionne un joueur et un slot")
+    BLOOD._soFields = { hp = soHp, armor = soArmor, speed = soSpeed, info = soInfo }
+
+    local function soQuery()
+        local sid = string.Trim(sidEntry:GetValue() or "")
+        if sid == "" then return end
+        local _, slot = soSlot:GetSelected()
+        net.Start("origines_query_statoverride")
+        net.WriteString(sid)
+        net.WriteUInt(tonumber(slot) or 1, 8)
+        net.SendToServer()
+    end
+    soSlot.OnSelect = function() soQuery() end
+    soLoad.DoClick = function() soQuery() end
+
+    local rowSOBtns = vgui.Create("DPanel", body)
+    rowSOBtns:Dock(TOP) rowSOBtns:DockMargin(0, S(2), S(6), S(8)) rowSOBtns:SetTall(S(30)) rowSOBtns.Paint = function() end
+    local soSave = vgui.Create("DButton", rowSOBtns)
+    soSave:Dock(LEFT) soSave:SetWide(S(240)) soSave:SetText("Enregistrer les stats forcées")
+    UI.SkinButton(soSave, "gold")
+    soSave.DoClick = function()
+        local _, slot = soSlot:GetSelected()
+        local function pi(e) local v = string.Trim(e:GetValue() or "") if v == "" then return -1 end return math.floor(tonumber(v) or -1) end
+        local function pf(e) local v = string.Trim(e:GetValue() or "") if v == "" then return -1 end return tonumber(v) or -1 end
+        net.Start("origines_set_statoverride")
+        net.WriteString(sidEntry:GetValue() or "")
+        net.WriteUInt(tonumber(slot) or 1, 8)
+        net.WriteInt(pi(soHp), 32)
+        net.WriteInt(pi(soArmor), 32)
+        net.WriteFloat(pf(soSpeed))
+        net.SendToServer()
+        timer.Simple(0.15, soQuery)
+    end
+    local soClear = vgui.Create("DButton", rowSOBtns)
+    soClear:Dock(FILL) soClear:DockMargin(S(8), 0, 0, 0) soClear:SetText("Effacer (auto)")
+    UI.SkinButton(soClear, "blood")
+    soClear.DoClick = function()
+        local _, slot = soSlot:GetSelected()
+        net.Start("origines_clear_statoverride")
+        net.WriteString(sidEntry:GetValue() or "")
+        net.WriteUInt(tonumber(slot) or 1, 8)
+        net.SendToServer()
+        soHp:SetText("") soArmor:SetText("") soSpeed:SetText("")
+        timer.Simple(0.15, soQuery)
+    end
 
     return { GetSid = function() return string.Trim(sidEntry:GetValue() or "") end, sidEntry = sidEntry }
 end
@@ -463,7 +569,7 @@ BLOOD.Origines.AddServerSection(function(parent)
 
     net.Start("origines_req_rarity") net.SendToServer()
     BLOOD.RenderRarity() -- affiche l'état courant (ou « Chargement… »)
-end)
+end, "blood_rarity")
 
 function BLOOD.OpenAdminMenu(races)
     if IsValid(BLOOD.AdminFrame) then BLOOD.AdminFrame:Remove() end

@@ -60,6 +60,50 @@ function BLOOD.SQL.Init()
         weight INTEGER NOT NULL DEFAULT 0,
         tier   TEXT NOT NULL DEFAULT ''
     );]])
+
+    -- Stats forcées PAR (joueur, slot) : remplacent les valeurs finales
+    -- (job/race/niveau). -1 = non défini => valeur automatique.
+    sql.Query([[CREATE TABLE IF NOT EXISTS blood_statoverride (
+        steamid64 TEXT NOT NULL,
+        slot      INTEGER NOT NULL,
+        hp        INTEGER NOT NULL DEFAULT -1,
+        armor     INTEGER NOT NULL DEFAULT -1,
+        speed     REAL    NOT NULL DEFAULT -1,
+        PRIMARY KEY (steamid64, slot)
+    );]])
+end
+
+----------------------------------------------------------------------
+-- Stats forcées par (joueur, slot)
+----------------------------------------------------------------------
+
+--- Renvoie { hp=, armor=, speed= } avec nil pour les champs non définis.
+function BLOOD.SQL.GetStatOverride(sid64, slot)
+    local rows = sql.Query("SELECT hp, armor, speed FROM blood_statoverride WHERE steamid64 = "
+        .. E(sid64) .. " AND slot = " .. N(slot) .. ";")
+    if istable(rows) and rows[1] then
+        local r = rows[1]
+        local hp, ar, sp = tonumber(r.hp), tonumber(r.armor), tonumber(r.speed)
+        return {
+            hp    = (hp and hp >= 0) and hp or nil,
+            armor = (ar and ar >= 0) and ar or nil,
+            speed = (sp and sp >= 0) and sp or nil,
+        }
+    end
+    return {}
+end
+
+--- Écrit l'override (-1 = non défini). speed est un multiplicateur (REAL).
+function BLOOD.SQL.SetStatOverride(sid64, slot, hp, armor, speed)
+    local sp = tonumber(speed)
+    sp = (sp and sp >= 0) and sp or -1
+    sql.Query("INSERT OR REPLACE INTO blood_statoverride (steamid64, slot, hp, armor, speed) VALUES ("
+        .. E(sid64) .. ", " .. N(slot) .. ", " .. N(hp) .. ", " .. N(armor) .. ", "
+        .. string.format("%f", sp) .. ");")
+end
+
+function BLOOD.SQL.ClearStatOverride(sid64, slot)
+    sql.Query("DELETE FROM blood_statoverride WHERE steamid64 = " .. E(sid64) .. " AND slot = " .. N(slot) .. ";")
 end
 
 ----------------------------------------------------------------------

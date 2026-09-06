@@ -260,6 +260,71 @@ BLOOD.NetReceive("origines_set_rarity", 0.3, function(_, ply)
     sendRarity(ply) -- renvoie la table à jour (chances recalculées)
 end)
 
+----------------------------------------------------------------------
+-- Stats forcées par (joueur, slot) : PV/Armure exacts, Vitesse = ×mult.
+--   Remplacent job/race/niveau. Marchent hors-ligne (SQL direct).
+----------------------------------------------------------------------
+local function sendStatOverride(ply, sid, slot)
+    local ov = BLOOD.SQL.GetStatOverride(sid, slot)
+    net.Start("origines_statoverride_info")
+        net.WriteString(sid)
+        net.WriteUInt(slot, 8)
+        net.WriteInt(ov.hp or -1, 32)
+        net.WriteInt(ov.armor or -1, 32)
+        net.WriteFloat(ov.speed or -1)
+    net.Send(ply)
+end
+
+local function reapplyIfActive(sid, slot)
+    local t = BLOOD.GetPlayerBySteamID64(sid)
+    if IsValid(t) and (t.BloodActiveSlot or 1) == slot and t:Alive() and BLOOD.ApplyComputedStats then
+        BLOOD.ApplyComputedStats(t, true)
+    end
+end
+
+BLOOD.NetReceive("origines_set_statoverride", 0.3, function(_, ply)
+    if not BLOOD.IsAdmin(ply) then
+        logAdmin("REFUS set_statoverride de " .. ply:Nick() .. " (" .. ply:SteamID64() .. ") — non autorisé")
+        return
+    end
+    local sid   = BLOOD.NormalizeSteamID(net.ReadString())
+    local slot  = net.ReadUInt(8)
+    local hp    = net.ReadInt(32)
+    local armor = net.ReadInt(32)
+    local speed = net.ReadFloat()
+
+    if not sid then BLOOD.Notify(ply, "SteamID invalide.", "error") return end
+    if slot < 1 or slot > C.MaxSlots then BLOOD.Notify(ply, "Slot invalide.", "error") return end
+
+    BLOOD.SQL.SetStatOverride(sid, slot, hp, armor, speed)
+    reapplyIfActive(sid, slot)
+    logAdmin(ply:Nick() .. " (" .. ply:SteamID64() .. ") a réglé les stats forcées de " .. sid
+        .. " slot " .. slot .. " (hp=" .. hp .. " armor=" .. armor .. " speed=" .. speed .. ")")
+    BLOOD.Notify(ply, "Stats forcées enregistrées (" .. sid .. " slot " .. slot .. ").", "info")
+    sendStatOverride(ply, sid, slot)
+end)
+
+BLOOD.NetReceive("origines_clear_statoverride", 0.3, function(_, ply)
+    if not BLOOD.IsAdmin(ply) then return end
+    local sid  = BLOOD.NormalizeSteamID(net.ReadString())
+    local slot = net.ReadUInt(8)
+    if not sid or slot < 1 or slot > C.MaxSlots then return end
+
+    BLOOD.SQL.ClearStatOverride(sid, slot)
+    reapplyIfActive(sid, slot)
+    logAdmin(ply:Nick() .. " (" .. ply:SteamID64() .. ") a effacé les stats forcées de " .. sid .. " slot " .. slot)
+    BLOOD.Notify(ply, "Stats forcées effacées (" .. sid .. " slot " .. slot .. ").", "info")
+    sendStatOverride(ply, sid, slot)
+end)
+
+BLOOD.NetReceive("origines_query_statoverride", 0.15, function(_, ply)
+    if not BLOOD.IsAdmin(ply) then return end
+    local sid  = BLOOD.NormalizeSteamID(net.ReadString())
+    local slot = net.ReadUInt(8)
+    if not sid or slot < 1 or slot > C.MaxSlots then return end
+    sendStatOverride(ply, sid, slot)
+end)
+
 BLOOD.NetReceive("origines_set_covan", 0.3, function(_, ply)
     if not BLOOD.IsAdmin(ply) then
         logAdmin("REFUS set_covan de " .. ply:Nick() .. " (" .. ply:SteamID64() .. ") — non autorisé")

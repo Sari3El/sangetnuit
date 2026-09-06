@@ -18,10 +18,15 @@ net.Receive("slvl_xpmult", function()
     if IsValid(SLVL._xpmultField) then SLVL._xpmultField:SetText(tostring(v)) end
 end)
 
+local addPlayer = BLOOD.Origines.AddPlayerSection
+    or function(fn) table.insert(BLOOD.Origines.playerSections, fn) end
+local addServer = BLOOD.Origines.AddServerSection
+    or function(fn) table.insert(BLOOD.Origines.serverSections, fn) end
+
 ----------------------------------------------------------------------
 -- Gestion Joueurs : Niveau & compétences
 ----------------------------------------------------------------------
-table.insert(BLOOD.Origines.playerSections, function(p, ctx)
+addPlayer(function(p, ctx)
     local UI, C, S = BLOOD.UI, BLOOD.UI.Col, BLOOD.UI.Scale
     BLOOD.Origines.SectionLabel(p, "6)  Niveau & compétences  — par personnage")
 
@@ -79,12 +84,12 @@ table.insert(BLOOD.Origines.playerSections, function(p, ctx)
             net.WriteInt(math.floor(tonumber(ent:GetValue()) or 0), 32)
             net.SendToServer()
         end, "1")
-end)
+end, "slvl_levels")
 
 ----------------------------------------------------------------------
 -- Gestion Serveur : Multiplicateur d'XP
 ----------------------------------------------------------------------
-table.insert(BLOOD.Origines.serverSections, function(p)
+addServer(function(p)
     local UI, C, S = BLOOD.UI, BLOOD.UI.Col, BLOOD.UI.Scale
     BLOOD.Origines.SectionLabel(p, "Multiplicateur d'XP  (0 = normal ×1 ; décimales OK)")
     BLOOD.Origines.FieldLabel(p, "Valeur (ex. 2 = ×2, 1.5 = ×1.5, 0 = normal) :")
@@ -107,4 +112,4 @@ table.insert(BLOOD.Origines.serverSections, function(p)
 
     -- Demander la valeur courante
     net.Start("slvl_req_xpmult") net.SendToServer()
-end)
+end, "slvl_xpmult")
