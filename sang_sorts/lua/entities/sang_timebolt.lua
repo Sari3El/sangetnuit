@@ -1,10 +1,21 @@
 --[[-------------------------------------------------------------------------
     Sang et Nuit — Entité « éclair temporel » (Magie Temporelle)
-      Phase 1 (fly) : projectile qui avance (particule fly).
-      Phase 2 (zone) : au contact, se fige sur place et STOP LE TEMPS dans son
-        rayon pendant StunDuration s : joueurs/PNJ figés + invulnérables,
-        objets/projectiles physiques figés (vitesse mémorisée puis restaurée).
-        Les nouveaux entrants sont figés aussi. Le lanceur n'est jamais figé.
+      Phase 1 (fly) : projectile qui avance (particule FlyParticle).
+      Phase 2 (zone) : au contact, se fige et STOPPE LE TEMPS dans son rayon
+        pendant StunDuration s.
+
+      Technique de gel inspirée de « Quantum Break Time Powers » (étudiée) :
+        - Joueurs : Freeze(true) + MOVETYPE_NONE + vitesse remise à zéro chaque
+          tick ; vitesse d'origine restaurée à la fin (ils « repartent »).
+        - PNJ : on repousse leur NextThink au-delà de la fin du gel → leur IA
+          et leur animation se figent réellement (bien mieux que FL_FROZEN) ;
+          MOVETYPE d'origine restauré à la fin.
+        - Objets physiques / projectiles : on mémorise vitesse + vitesse
+          angulaire + état de motion, EnableMotion(false), vitesse à zéro ;
+          tout est restauré à la fin (les objets reprennent leur trajectoire).
+        - Ré-appliqué chaque tick → les nouveaux entrants sont figés aussi.
+        - Le feu est éteint puis rallumé à la fin.
+        - Tout est invulnérable tant que c'est figé. Le lanceur n'est jamais figé.
 ---------------------------------------------------------------------------]]
 
 AddCSLuaFile()
@@ -65,7 +76,7 @@ if SERVER then
                 self:Remove()
                 return
             end
-            self:NextThink(CurTime() + 0.1)
+            self:NextThink(CurTime()) -- chaque tick : gèle en continu
             return true
         end
     end
@@ -77,44 +88,62 @@ if SERVER then
         self:SetZoneActive(true)
         if self.Sound then self:EmitSound(self.Sound, 80, 100) end
 
+        -- Invulnérabilité de tout ce qui est figé par CETTE zone.
         self.HookID = "SangTimeStop_" .. self:EntIndex()
         local frozen = self.Frozen
         hook.Add("EntityTakeDamage", self.HookID, function(target)
-            if IsValid(target) and frozen[target] then return true end -- invulnérable
+            if IsValid(target) and frozen[target] then return true end
         end)
 
         self:FreezeZone()
     end
 
+    -- Fige (ou re-fige) une entité. Mémorise son état d'origine une seule fois.
     function ENT:FreezeEntity(e)
-        local data = {}
+        local endt = (self.ZoneEnd or CurTime()) + FrameTime() * 2
+
         if e:IsPlayer() then
-            data.type = "ply"
-            data.vel = e:GetVelocity()
-            data.move = e:GetMoveType()
-            e:AddFlags(FL_FROZEN)
-            e:GodEnable()
+            if not self.Frozen[e] then
+                self.Frozen[e] = { type = "ply", vel = e:GetVelocity(),
+                    mv = e:GetMoveType(), onfire = e:IsOnFire() }
+            end
+            e:Freeze(true)
             e:SetMoveType(MOVETYPE_NONE)
+            e:SetVelocity(-e:GetVelocity())
+
         elseif e:IsNPC() then
-            data.type = "npc"
-            e:AddFlags(FL_FROZEN)
+            if not self.Frozen[e] then
+                self.Frozen[e] = { type = "npc", mv = e:GetMoveType(), onfire = e:IsOnFire() }
+            end
+            e:SetMoveType(MOVETYPE_NONE)
+            e:NextThink(endt) -- repousse l'IA au-delà de la fin => figée
+
         else
             local phys = e:GetPhysicsObject()
             if IsValid(phys) and phys:IsMotionEnabled() then
-                data.type = "phys"
-                data.vel  = phys:GetVelocity()
-                data.avel = phys:GetAngleVelocity()
+                if not self.Frozen[e] then
+                    self.Frozen[e] = { type = "phys", vel = phys:GetVelocity(),
+                        avel = phys:GetAngleVelocity(),
+                        health = e.Health and e:Health() or nil, onfire = e:IsOnFire() }
+                end
                 phys:EnableMotion(false)
+                phys:SetVelocity(vector_origin)
+                e:SetVelocity(vector_origin)
+                e:NextThink(endt)
+                if e.SetHealth and self.Frozen[e].health then e:SetHealth(self.Frozen[e].health) end
             else
                 return
             end
         end
-        self.Frozen[e] = data
+
+        -- Le feu est « figé » : éteint puis rallumé à la fin.
+        if e:IsOnFire() then e:Extinguish() end
     end
 
     function ENT:FreezeZone()
         for _, e in ipairs(ents.FindInSphere(self:GetPos(), self.SRadius)) do
-            if IsValid(e) and e ~= self and e ~= self.SOwner and not self.Frozen[e] then
+            if IsValid(e) and e ~= self and e ~= self.SOwner
+               and string.sub(e:GetClass(), 1, 5) ~= "sang_" then
                 self:FreezeEntity(e)
             end
         end
@@ -124,21 +153,22 @@ if SERVER then
         for e, data in pairs(self.Frozen or {}) do
             if IsValid(e) then
                 if data.type == "ply" then
-                    e:RemoveFlags(FL_FROZEN)
-                    e:SetMoveType(data.move or MOVETYPE_WALK)
-                    e:GodDisable()
+                    e:Freeze(false)
+                    e:SetMoveType(data.mv or MOVETYPE_WALK)
                     if data.vel then e:SetVelocity(data.vel) end
                 elseif data.type == "npc" then
-                    e:RemoveFlags(FL_FROZEN)
+                    e:SetMoveType(data.mv or MOVETYPE_STEP)
+                    e:NextThink(CurTime()) -- l'IA reprend immédiatement
                 elseif data.type == "phys" then
                     local phys = e:GetPhysicsObject()
                     if IsValid(phys) then
                         phys:EnableMotion(true)
                         phys:Wake()
                         if data.vel  then phys:SetVelocity(data.vel) end
-                        if data.avel then phys:SetAngleVelocity(data.avel) end
+                        if data.avel then phys:AddAngleVelocity(data.avel) end
                     end
                 end
+                if data.onfire and e.Ignite then e:Ignite(6) end
             end
         end
         self.Frozen = {}
@@ -158,6 +188,7 @@ if CLIENT then
         if not self.FlyAtt then
             local p = self:GetFlyParticle()
             if p and p ~= "" then
+                if SANGSPELL and SANGSPELL.ResolveParticle then p = SANGSPELL.ResolveParticle(p) end
                 ParticleEffectAttach(p, PATTACH_ABSORIGIN_FOLLOW, self, 0)
                 self.FlyAtt = true
             end
@@ -166,6 +197,7 @@ if CLIENT then
             self:StopParticles()
             local p = self:GetZoneParticle()
             if p and p ~= "" then
+                if SANGSPELL and SANGSPELL.ResolveParticle then p = SANGSPELL.ResolveParticle(p) end
                 ParticleEffectAttach(p, PATTACH_ABSORIGIN_FOLLOW, self, 0)
             end
             self.ZoneAtt = true
