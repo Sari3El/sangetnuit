@@ -33,6 +33,15 @@ local MODULES = {
     { "sang_sorts/sp_tmp_stase.lua",     "sh" }, -- T7 Stase Temporelle
     { "sang_sorts/sp_tmp_bouclier.lua",  "sh" }, -- T8 Bouclier Temporel
     { "sang_sorts/sp_tmp_corrosion.lua", "sh" }, -- T9 Corrosion Temporelle
+    -- Nouveaux sorts Nécrotiques (rouge sang) :
+    { "sang_sorts/sp_nec_drain.lua",      "sh" }, -- N1 Drain de Vie (lien)
+    { "sang_sorts/sp_nec_blood.lua",      "sh" }, -- N2 Explosion de Sang
+    { "sang_sorts/sp_nec_shield.lua",     "sh" }, -- N4 Bouclier d'Hémoglobine
+    { "sang_sorts/sp_nec_shadowbolt.lua", "sh" }, -- N6 Nuée d'Ombres (aveugle)
+    { "sang_sorts/sp_nec_cloak.lua",      "sh" }, -- N7 Manteau d'Ombre
+    { "sang_sorts/sp_nec_fly.lua",        "sh" }, -- N8 Vol Spectral
+    { "sang_sorts/sp_nec_servant.lua",    "sh" }, -- N13 Serviteur
+    { "sang_sorts/cl_fx.lua",           "cl" }, -- effets d'écran (aveuglement)
     { "sang_sorts/cl_hide.lua",         "cl" }, -- masque les sorts vanilla (client)
 }
 

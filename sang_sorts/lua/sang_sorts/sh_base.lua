@@ -231,6 +231,18 @@ if SERVER then
     ----------------------------------------------------------------------
     SANGSPELL.MAGIC = DMG_SHOCK
 
+    util.AddNetworkString("sang_blind") -- Nuée d'Ombres : assombrit l'écran
+
+    --- Sacrifie des PV du lanceur (hémomancie). Renvoie false si trop bas.
+    function SANGSPELL.SacrificeHP(ply, amount)
+        if not IsValid(ply) or not ply:Alive() then return false end
+        amount = math.floor(amount or 0)
+        if amount <= 0 then return true end
+        if ply:Health() <= amount then return false end -- ne se suicide pas
+        ply:SetHealth(ply:Health() - amount)
+        return true
+    end
+
     ----------------------------------------------------------------------
     -- RALENTISSEMENT : réduit la vitesse d'une cible pendant `dur` s.
     --   Joueurs : on baisse walk/run puis on restaure. PNJ/objets : un timer

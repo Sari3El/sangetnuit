@@ -125,6 +125,30 @@ C.TmpBouclier  = { Mana = 40, Cooldown = 18, Radius = 230, Duration = 8 }
 C.TmpCorrosion = { Mana = 30, Cooldown = 10, Speed = 2000, Radius = 190,
                    DamagePerSec = 4, Duration = 6 }
 
+----------------------------------------------------------------------
+-- SORTS NÉCROTIQUES (Sang + Ombres). Couleur d'école : ROUGE SANG SOMBRE.
+----------------------------------------------------------------------
+C.ColNecro = Color(150, 20, 30)     -- rouge sang sombre
+
+-- N1 Drain de Vie : projectile -> LIEN rouge (draine + soigne), se coupe si trop loin.
+C.NecDrain     = { Mana = 20, Cooldown = 6, Speed = 2600, Duration = 6, MaxLink = 700,
+                   Dps = 8, HealRatio = 0.5 }
+-- N2 Explosion de Sang : sacrifie des PV -> grosse explosion de zone.
+C.NecBlood     = { Mana = 15, Cooldown = 10, HpCost = 15, Radius = 260, Damage = 45 }
+-- N4 Bouclier d'Hémoglobine : sacrifie des PV -> bouclier d'absorption (modéré).
+C.NecShield    = { Mana = 20, Cooldown = 12, HpCost = 15, Shield = 45, Duration = 8 }
+-- N6 Nuée d'Ombres : projectile -> aveugle la cible (écran assombri) + petit DoT.
+C.NecShadowBolt= { Mana = 25, Cooldown = 9, Speed = 2500, Damage = 12, BlindDur = 3,
+                   DotDps = 3, DotDur = 4 }
+-- N7 Manteau d'Ombre : semi-invisible + saut plus haut + traînée d'ombre.
+C.NecCloak     = { Mana = 30, Cooldown = 16, Duration = 6, Alpha = 55, JumpMul = 1.4 }
+-- N8 Vol Spectral : vol (fumée noire, style Apparition HPW), durée limitée.
+C.NecFly       = { Mana = 35, Cooldown = 16, Duration = 7, Speed = 2400, SprintSpeed = 4200,
+                   Smoke = "hpw_apparation_black" }
+-- N13 Serviteur : sur un cadavre frais -> invoque un serviteur qui n'attaque pas le lanceur.
+C.NecServant   = { Mana = 45, Cooldown = 25, NPC = "drg_roach_ds1_h", CorpseAge = 30,
+                   CorpseDist = 160, Life = 25 }
+
 -- Sort « Boule de Feu » (Élémentaire) : orbite -> lancée -> explosion
 C.Elementaire = {
     Mana        = 45, Cooldown = 10,
