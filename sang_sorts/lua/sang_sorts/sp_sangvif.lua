@@ -103,7 +103,7 @@ end
 ----------------------------------------------------------------------
 local Spell = { }
 Spell.LearnTime   = 0                      -- appris instantanément (livre => utilisable)
-Spell.Category    = "Magie Élémentaire"    -- une de nos 4 magies
+Spell.Category    = "Magie Sacré"          -- une de nos magies
 Spell.SangSort    = true                   -- marque « à nous » (jamais masqué)
 Spell.CanSelfCast = false                  -- se lance toujours sur soi
 Spell.ForceDelay  = CFG.Cooldown or 5      -- cooldown 5 s (client + serveur)
