@@ -39,19 +39,30 @@ function SLVL.RefreshStats()
             surface.SetDrawColor(C.goldDk); surface.DrawOutlinedRect(0, 0, w, h, 1)
             draw.SimpleText(st.name, "SangUI_Body", S(12), S(8), C.goldLt, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
             draw.SimpleText(st.desc, "SangUI_Small", S(12), S(30), C.txtDim, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
-            -- points + %
-            draw.SimpleText(pts .. " / " .. maxPts, "SangUI_Body", w - S(120), h / 2, C.txt, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
-            draw.SimpleText("+" .. string.format("%.2f", pct) .. "%", "SangUI_Small", w - S(120), h / 2 + S(14), C.goldLt, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+            -- points + %  (décalés à gauche pour laisser la place aux 2 boutons)
+            draw.SimpleText(pts .. " / " .. maxPts, "SangUI_Body", w - S(190), h / 2, C.txt, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+            draw.SimpleText("+" .. string.format("%.2f", pct) .. "%", "SangUI_Small", w - S(190), h / 2 + S(14), C.goldLt, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
         end
 
-        local plus = vgui.Create("DButton", row)
-        plus:Dock(RIGHT) plus:DockMargin(S(6), S(10), S(10), S(10)) plus:SetWide(S(90))
-        plus:SetText("+ 1 point")
-        UI.SkinButton(plus, "gold")
-        plus:SetEnabled(d.avail > 0 and pts < maxPts)
-        plus.DoClick = function()
-            net.Start("slvl_spend") net.WriteString(st.id) net.SendToServer()
+        local canSpend = (d.avail > 0 and pts < maxPts)
+        local function spend(n)
+            net.Start("slvl_spend") net.WriteString(st.id) net.WriteUInt(n, 8) net.SendToServer()
         end
+
+        -- +10 (à droite) puis +1 (à sa gauche) => ordre lu : [+1] [+10]
+        local plus10 = vgui.Create("DButton", row)
+        plus10:Dock(RIGHT) plus10:DockMargin(S(6), S(10), S(10), S(10)) plus10:SetWide(S(66))
+        plus10:SetText("+10")
+        UI.SkinButton(plus10, "gold")
+        plus10:SetEnabled(canSpend)
+        plus10.DoClick = function() spend(10) end
+
+        local plus1 = vgui.Create("DButton", row)
+        plus1:Dock(RIGHT) plus1:DockMargin(S(6), S(10), 0, S(10)) plus1:SetWide(S(58))
+        plus1:SetText("+1")
+        UI.SkinButton(plus1, "gold")
+        plus1:SetEnabled(canSpend)
+        plus1.DoClick = function() spend(1) end
     end
 
     -- Réinitialisation (points de reset)

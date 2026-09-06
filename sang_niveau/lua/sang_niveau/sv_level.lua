@@ -152,12 +152,27 @@ end
 local VALID_STATS = { force = true, resist = true, agilite = true, vitalite = true }
 
 SLVL.NetReceive("slvl_spend", 0.15, function(_, ply)
-    local key = net.ReadString()
+    local key  = net.ReadString()
+    local want = math.Clamp(net.ReadUInt(8), 1, 100) -- +1 ou +10 (ou plus)
     if not ply.SLVL or not VALID_STATS[key] then return end
     if not SLVL.IsNearStats(ply) then notify(ply, "Approche-toi d'une borne.", "error") return end
-    if SLVL.Available(ply.SLVL) <= 0 then notify(ply, "Aucun point disponible.", "error") return end
-    if ply.SLVL[key] >= C.MaxPointsPerStat then notify(ply, "Statistique au maximum.", "error") return end
-    ply.SLVL[key] = ply.SLVL[key] + 1
+
+    -- Dépense jusqu'à `want` points, bornée par les points dispo et le max.
+    local added = 0
+    while added < want and SLVL.Available(ply.SLVL) > 0 and ply.SLVL[key] < C.MaxPointsPerStat do
+        ply.SLVL[key] = ply.SLVL[key] + 1
+        added = added + 1
+    end
+
+    if added == 0 then
+        if SLVL.Available(ply.SLVL) <= 0 then
+            notify(ply, "Aucun point disponible.", "error")
+        else
+            notify(ply, "Statistique au maximum.", "error")
+        end
+        return
+    end
+
     SLVL.Save(ply)
     if BLOOD.ApplyComputedStats then BLOOD.ApplyComputedStats(ply, false) end
     SLVL.Sync(ply)
