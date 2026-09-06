@@ -78,6 +78,42 @@ end
 BLOOD.LoadRarity()
 
 ----------------------------------------------------------------------
+-- Diagnostic : affiche le détail du calcul des stats d'un joueur.
+--   Console serveur : sang_debug_stats [me|steamid]
+--   En jeu (admin)  : sang_debug_stats            (sur soi)
+-- Sert à vérifier que les jobs / niveaux / configs sont bien pris en compte
+-- (si "Hooks BLOOD_ComputeStats: AUCUN", c'est que sang_jobs/sang_niveau ne
+--  sont pas chargés OU que ce cœur 'sang_et_nuit' n'est pas à jour).
+----------------------------------------------------------------------
+concommand.Add("sang_debug_stats", function(ply, _, args)
+    if IsValid(ply) and not BLOOD.IsAdmin(ply) then return end
+    local function out(msg) if IsValid(ply) then ply:PrintMessage(HUD_PRINTCONSOLE, msg) else print(msg) end end
+
+    local target = ply
+    if args[1] and args[1] ~= "me" then
+        local sid = BLOOD.NormalizeSteamID(args[1])
+        target = sid and BLOOD.GetPlayerBySteamID64(sid) or nil
+    end
+    if not IsValid(target) then out("[Sang] Cible invalide.") return end
+
+    out("=== Sang debug stats : " .. target:Nick() .. " ===")
+    local hks = hook.GetTable()["BLOOD_ComputeStats"] or {}
+    local names = {}
+    for k in pairs(hks) do names[#names + 1] = tostring(k) end
+    out("Hooks BLOOD_ComputeStats: " .. (#names > 0 and table.concat(names, ", ")
+        or "AUCUN — sang_jobs/sang_niveau non chargés, ou coeur 'sang_et_nuit' pas à jour"))
+
+    out("Slot actif: " .. (target.BloodActiveSlot or 1) .. "  |  Race: " .. BLOOD.GetActiveRaceId(target))
+    out("NW job: " .. target:GetNWString("sang_job", "(aucun)") .. "  |  NW faction: " .. target:GetNWString("sang_faction", "(aucune)"))
+
+    local s = BLOOD.ComputeStats(target)
+    out(("baseHP=%s  hpMul=%.3f  =>  maxHP=%d"):format(tostring(s.baseHP), s.hpMul, math.Round(s.baseHP * s.hpMul)))
+    out(("armor=%s  |  speedMul=%.3f  =>  walk=%d run=%d"):format(tostring(s.armor), s.speedMul,
+        math.Round(s.baseWalk * s.speedMul), math.Round(s.baseRun * s.speedMul)))
+    out(("EN JEU: HP=%d/%d  Armure=%d  Walk=%d"):format(target:Health(), target:GetMaxHealth(), target:Armor(), target:GetWalkSpeed()))
+end)
+
+----------------------------------------------------------------------
 -- Race active d'un joueur (depuis le cache mémoire du slot actif)
 ----------------------------------------------------------------------
 function BLOOD.GetActiveRaceId(ply)
