@@ -47,15 +47,32 @@ do
     local registered = {}       -- fichiers déjà passés à game.AddParticles
     local resolveCache = {}
 
+    -- Liste des .pcf à lire : les fichiers explicites de la config (chemins
+    -- EXACTS, fiables même pour du contenu Workshop) + auto-découverte. On ne
+    -- se fie PAS uniquement à file.Find (qui n'énumère pas toujours les .pcf
+    -- montés depuis un GMA Workshop).
+    local function candidateFiles()
+        local set = {}
+        for _, f in ipairs((SANGSPELL.Config and SANGSPELL.Config.ParticleFiles) or {}) do
+            set[f] = true
+        end
+        for _, patt in ipairs({ "particles/cruel_base*.pcf", "particles/*.pcf" }) do
+            local found = file.Find(patt, "GAME")
+            if istable(found) then for _, v in ipairs(found) do set["particles/" .. v] = true end end
+        end
+        return set
+    end
+
     local function buildIndex()
         index = {}
-        for _, v in ipairs(file.Find("particles/*.pcf", "GAME") or {}) do
-            local path = "particles/" .. v
-            local data = file.Read(path, "GAME")
-            if data then
-                -- Capture tous les noms « [N]_xxx » présents dans le fichier.
-                for nm in string.gmatch(data, "%[%d+%]_[%w_]+") do
-                    if not index[nm] then index[nm] = path end
+        for path in pairs(candidateFiles()) do
+            if file.Exists(path, "GAME") then
+                local data = file.Read(path, "GAME")
+                if data then
+                    -- Capture tous les noms « [N]_xxx » présents dans le fichier.
+                    for nm in string.gmatch(data, "%[%d+%]_[%w_]+") do
+                        if not index[nm] then index[nm] = path end
+                    end
                 end
             end
         end
@@ -68,6 +85,7 @@ do
             registered[path] = true
         end
     end
+    SANGSPELL.RegisterParticleFile = register
 
     function SANGSPELL.ResolveParticle(name)
         if not name or name == "" then return name end
@@ -76,17 +94,39 @@ do
 
         local exact = name
         if not string.find(name, "^%[") then
-            -- Base « nom » → cherche « [N]_nom » exact dans l'index.
-            local want = "^%[%d+%]_" .. string.PatternSafe(name) .. "$"
+            -- Base « nom » → cherche d'abord « [N]_nom » exact, sinon un nom
+            -- qui CONTIENT « nom » (au cas où le préfixe ne serait pas [N]_).
+            local want  = "^%[%d+%]_" .. string.PatternSafe(name) .. "$"
+            local loose = string.PatternSafe(name)
+            local fallback
             for k in pairs(index) do
                 if string.match(k, want) then exact = k break end
+                if not fallback and string.find(k, loose, 1, true) then fallback = k end
             end
+            if exact == name and fallback then exact = fallback end
         end
 
         register(index[exact])          -- charge le .pcf qui le contient
         resolveCache[name] = exact
         return exact
     end
+
+    -- Debug : liste les systèmes de particules indexés qui contiennent <filtre>.
+    --   Console : sang_particles strange     (ou vide = tout)
+    concommand.Add("sang_particles", function(ply, _, args)
+        if not index then buildIndex() end
+        local filt = string.lower(args[1] or "")
+        local function out(msg) if IsValid(ply) then ply:PrintMessage(HUD_PRINTCONSOLE, msg) else print(msg) end end
+        out("=== Particules indexées (" .. (CLIENT and "client" or "serveur") .. ") ===")
+        local n = 0
+        for k, path in pairs(index) do
+            if filt == "" or string.find(string.lower(k), filt, 1, true) then
+                out(("  %-40s  <- %s"):format(k, path))
+                n = n + 1
+            end
+        end
+        out("Total : " .. n .. (filt ~= "" and (" (filtre: " .. filt .. ")") or ""))
+    end)
 end
 
 --- Prépare un sort. opts = { category, mana, cooldown, color, icon, whatToSay }
