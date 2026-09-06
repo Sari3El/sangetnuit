@@ -72,6 +72,11 @@ C.HungerDecayInterval  = 20     -- secondes entre chaque -1 point de faim
 C.HungerStarveDamage   = 0      -- dégâts quand faim = 0 (0 = désactivé)
 C.HungerStarveInterval = 5      -- secondes entre chaque tick de dégâts de faim
 
+-- Mana (réservoir affiché au HUD, réglé par la config « Stats forcées »).
+-- Consommée par les sorts (BLOOD.TakeMana) et régénérée avec le temps.
+C.ManaRegenInterval = 2         -- secondes entre chaque régén
+C.ManaRegenAmount   = 5         -- points de mana rendus à chaque régén
+
 ----------------------------------------------------------------------
 -- Paliers de rareté (couleur du message d'annonce + roulette de reroll)
 ----------------------------------------------------------------------

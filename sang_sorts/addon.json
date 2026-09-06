@@ -1,0 +1,6 @@
+{
+    "title": "Sang et Nuit — Sorts (HPW : Sang Vif)",
+    "type": "servercontent",
+    "tags": ["roleplay", "fun"],
+    "ignore": ["*.md", "*.txt", ".git/*", ".gitignore"]
+}

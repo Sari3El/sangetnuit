@@ -1,0 +1,39 @@
+==========================================================================
+  SANG ET NUIT — SORTS (addon séparé, pour HPW_Rewrite)
+==========================================================================
+
+Ajoute des sorts custom à la baguette HPW_Rewrite (Harry Potter Wand),
+rangés dans la catégorie « Sang et Nuit » de la liste des sorts.
+
+--------------------------------------------------------------------------
+DÉPENDANCES
+--------------------------------------------------------------------------
+- HPW_Rewrite (la baguette) : OBLIGATOIRE (sinon le sort ne se charge pas).
+- sang_et_nuit : pour la MANA (BLOOD.TakeMana). Sans lui, le sort marche
+  mais ne coûte pas de mana.
+- La particule d'aura « golden_energy » vient d'un pack de particules à toi :
+  si elle n'est pas installée, le buff marche mais sans l'aura visuelle.
+  (Tu peux changer le nom de la particule dans lua/sang_sorts/sh_config.lua.)
+
+--------------------------------------------------------------------------
+INSTALLATION
+--------------------------------------------------------------------------
+Copie le dossier "sang_sorts" dans :
+    garrysmod/addons/
+
+--------------------------------------------------------------------------
+SORT : « Sang Vif »
+--------------------------------------------------------------------------
+- Catégorie : Sang et Nuit (dans « All Spells »).
+- Prends la baguette, apprends/sélectionne « Sang Vif » puis lance-le sur toi.
+- Effet : aura dorée (golden_energy) + tu cours plus vite et sautes plus
+  haut pendant ~15 secondes.
+- Coût : 25 de mana (système Sang). Cooldown : 5 secondes.
+
+Réglages dans lua/sang_sorts/sh_config.lua :
+    ManaCost / Cooldown / Duration / SpeedMul / JumpMul / Aura (particule) /
+    sons.
+
+Note : pour avoir de la mana, règle un réservoir via
+    Origines -> Config Perso -> « Stats forcées du perso » -> champ Mana.
+==========================================================================
