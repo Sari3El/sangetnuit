@@ -15,6 +15,8 @@ if SERVER then
     util.AddNetworkString("sang_bank_setplayer")  -- C->S : ajouter/retirer sur la banque d'un joueur
     util.AddNetworkString("sang_bank_query")       -- C->S : demander le solde d'un joueur/slot
     util.AddNetworkString("sang_bank_queryresult") -- S->C : solde d'un joueur/slot
+    util.AddNetworkString("sang_bank_queryall")       -- C->S : demander les 4 soldes d'un joueur
+    util.AddNetworkString("sang_bank_queryall_result")-- S->C : les 4 soldes (slot 1..4)
 
     -- Historique (admin uniquement)
     util.AddNetworkString("sang_bank_hist_req")    -- C->S : demander l'historique

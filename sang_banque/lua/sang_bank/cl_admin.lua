@@ -8,34 +8,49 @@
 
 SBANK = SBANK or {}
 SBANK.AdminSel = SBANK.AdminSel or { sid = "", slot = 1 }
-SBANK.PlayerBank = SBANK.PlayerBank or { sid = nil, slot = nil, amount = nil }
+SBANK.PlayerBank = SBANK.PlayerBank or { sid = nil, amounts = nil }
 SBANK.AdminTab = SBANK.AdminTab or "gestion"
 SBANK.History = SBANK.History or nil -- liste reçue du serveur (ou nil = pas encore)
 
+-- Affiche les 4 soldes du joueur sélectionné (même les slots vides = 0).
 local function pbankText()
-    local sel, pb = SBANK.AdminSel, SBANK.PlayerBank
-    if pb.sid and pb.sid == sel.sid and pb.slot == sel.slot and pb.amount ~= nil then
-        return "Solde en banque (slot " .. sel.slot .. ") : " .. string.Comma(pb.amount)
+    local pb = SBANK.PlayerBank
+    if not (pb.sid and pb.sid == SBANK.AdminSel.sid and pb.amounts) then
+        return "Soldes en banque : — (choisis un joueur)"
     end
-    return "Solde en banque : — (choisis un joueur et un slot)"
+    local parts = {}
+    for i = 1, 4 do parts[i] = "Slot " .. i .. " : " .. string.Comma(pb.amounts[i] or 0) end
+    return "Soldes en banque —  " .. table.concat(parts, "     ")
 end
 
 local function queryPlayerBank()
     local sid = SBANK.AdminSel.sid
     if not sid or sid == "" then return end
-    net.Start("sang_bank_query")
+    net.Start("sang_bank_queryall") -- récupère les 4 slots d'un coup
     net.WriteString(sid)
-    net.WriteUInt(SBANK.AdminSel.slot or 1, 8)
     net.SendToServer()
 end
 SBANK._queryPlayerBank = queryPlayerBank
 
+-- Réponse : les 4 soldes d'un joueur.
+net.Receive("sang_bank_queryall_result", function()
+    local sid = net.ReadString()
+    local amounts = {}
+    for i = 1, 4 do amounts[i] = net.ReadUInt(32) end
+    SBANK.PlayerBank = { sid = sid, amounts = amounts }
+    if IsValid(SBANK._pbankLabel) then SBANK._pbankLabel:SetText(pbankText()) end
+end)
+
+-- Réponse (un seul slot, après une opération admin) : patch le solde affiché.
 net.Receive("sang_bank_queryresult", function()
     local sid = net.ReadString()
     local slot = net.ReadUInt(8)
     local amount = net.ReadUInt(32)
-    SBANK.PlayerBank = { sid = sid, slot = slot, amount = amount }
-    if IsValid(SBANK._pbankLabel) then SBANK._pbankLabel:SetText(pbankText()) end
+    local pb = SBANK.PlayerBank
+    if pb and pb.sid == sid and pb.amounts then
+        pb.amounts[slot] = amount
+        if IsValid(SBANK._pbankLabel) then SBANK._pbankLabel:SetText(pbankText()) end
+    end
 end)
 
 local function section(parent, text)
@@ -193,7 +208,7 @@ function SBANK.BuildManageTab(parent)
     -- Solde en banque du joueur/slot sélectionné
     local pbankLbl = vgui.Create("DLabel", p)
     pbankLbl:Dock(TOP) pbankLbl:DockMargin(0, S(2), S(6), S(6)) pbankLbl:SetTall(S(22))
-    pbankLbl:SetFont("SangUI_Body") pbankLbl:SetTextColor(C.goldLt)
+    pbankLbl:SetFont("SangUI_Small") pbankLbl:SetTextColor(C.goldLt)
     pbankLbl:SetText(pbankText())
     SBANK._pbankLabel = pbankLbl
 

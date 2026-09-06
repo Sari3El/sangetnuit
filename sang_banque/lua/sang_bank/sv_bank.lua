@@ -185,6 +185,19 @@ SBANK.NetReceive("sang_bank_query", 0.15, function(_, ply)
     SBANK.SendQuery(ply, sid, slot, SBANK.GetPersonal(sid, slot))
 end)
 
+-- L'admin demande les 4 soldes d'un joueur (affichés même si vides = 0).
+SBANK.NetReceive("sang_bank_queryall", 0.2, function(_, ply)
+    if not (BLOOD and BLOOD.IsAdmin and BLOOD.IsAdmin(ply)) then return end
+    local sid = BLOOD and BLOOD.NormalizeSteamID and BLOOD.NormalizeSteamID(net.ReadString()) or nil
+    if not sid then return end
+    net.Start("sang_bank_queryall_result")
+        net.WriteString(sid)
+        for slot = 1, 4 do
+            net.WriteUInt(math.max(0, SBANK.GetPersonal(sid, slot)), 32)
+        end
+    net.Send(ply)
+end)
+
 ----------------------------------------------------------------------
 -- Historique (admin uniquement) : envoie les 100 dernières actions
 ----------------------------------------------------------------------
