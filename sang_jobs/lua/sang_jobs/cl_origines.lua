@@ -80,20 +80,84 @@ local function buildConfigPerso(f)
         net.SendToServer()
     end
 
-    -- Le menu déroulant des joueurs connectés remplit le SteamID cible.
-    combo.OnSelect = function(_, _, _, data) sidEntry:SetText(data or "") end
+    -- 2) Stats forcées du perso (par slot) — remplacent job / race / niveau,
+    --    QUEL QUE SOIT le job (override direct côté cœur, appliqué au-dessus
+    --    de tout dans BLOOD.ApplyComputedStats).
+    sectionLabel(body, "2)  Stats forcées du perso (par slot)  — remplacent job / race / niveau")
+    fieldLabel(body, "Vide = automatique.  PV / Armure = valeurs exactes ;  Vitesse = multiplicateur (ex. 1.3).")
+    local rowSO = vgui.Create("DPanel", body)
+    rowSO:Dock(TOP) rowSO:DockMargin(0, S(2), S(6), S(4)) rowSO:SetTall(S(26)) rowSO.Paint = function() end
+    local soSlot = vgui.Create("DComboBox", rowSO)
+    soSlot:Dock(LEFT) soSlot:SetWide(S(150)) UI.SkinCombo(soSlot)
+    for i = 1, (BLOOD.Config and BLOOD.Config.MaxSlots or 4) do soSlot:AddChoice("Slot " .. i, i) end
+    soSlot:ChooseOptionID(1)
+    local soLoad = vgui.Create("DButton", rowSO)
+    soLoad:Dock(FILL) soLoad:DockMargin(S(8), 0, 0, 0) soLoad:SetText("Charger les valeurs actuelles")
+    UI.SkinButton(soLoad, "default")
 
-    -- 2) Stats forcées : déplacé dans « Gestion Joueurs » (override direct,
-    --    par slot, qui remplace tout et s'applique QUEL QUE SOIT le job).
-    sectionLabel(body, "2)  Stats forcées (PV / Armure / Vitesse)")
-    local note = vgui.Create("DLabel", body)
-    note:Dock(TOP) note:DockMargin(0, S(2), S(6), S(6))
-    note:SetWrap(true) note:SetAutoStretchVertical(true)
-    note:SetFont("SangUI_Small") note:SetTextColor(C.goldLt)
-    note:SetText("Pour forcer les PV / Armure / Vitesse d'un joueur : Origines -> "
-        .. "« Gestion Joueurs » -> section « Stats forcées du perso (par slot) ». "
-        .. "Ces valeurs remplacent tout (job, race, niveau) et s'appliquent quel "
-        .. "que soit le job du personnage.")
+    local function soField(label)
+        local r = vgui.Create("DPanel", body)
+        r:Dock(TOP) r:DockMargin(0, 0, S(6), S(4)) r:SetTall(S(26)) r.Paint = function() end
+        local l = vgui.Create("DLabel", r)
+        l:Dock(LEFT) l:SetWide(S(220)) l:SetFont("SangUI_Small") l:SetTextColor(C.txt) l:SetText(label)
+        local e = vgui.Create("DTextEntry", r)
+        e:Dock(FILL) UI.SkinEntry(e) e:SetPlaceholderText("(vide = auto)")
+        return e
+    end
+    local soHp    = soField("PV forcés :")
+    local soArmor = soField("Armure forcée :")
+    local soSpeed = soField("Vitesse forcée (×, ex. 1.3) :")
+
+    local soInfo = vgui.Create("DLabel", body)
+    soInfo:Dock(TOP) soInfo:DockMargin(0, S(2), S(6), S(4)) soInfo:SetTall(S(20))
+    soInfo:SetFont("SangUI_Small") soInfo:SetTextColor(C.goldLt) soInfo:SetText("Actuel — sélectionne un joueur et un slot")
+    BLOOD._soFields = { hp = soHp, armor = soArmor, speed = soSpeed, info = soInfo }
+
+    local function soQuery()
+        local sid = string.Trim(sidEntry:GetValue() or "")
+        if sid == "" then return end
+        local _, slot = soSlot:GetSelected()
+        net.Start("origines_query_statoverride")
+        net.WriteString(sid)
+        net.WriteUInt(tonumber(slot) or 1, 8)
+        net.SendToServer()
+    end
+    soSlot.OnSelect = function() soQuery() end
+    soLoad.DoClick = function() soQuery() end
+    -- Le menu déroulant des joueurs connectés remplit le SteamID + recharge.
+    combo.OnSelect = function(_, _, _, data) sidEntry:SetText(data or "") soQuery() end
+    sidEntry.OnValueChange = function() soQuery() end
+
+    local rowSOBtns = vgui.Create("DPanel", body)
+    rowSOBtns:Dock(TOP) rowSOBtns:DockMargin(0, S(2), S(6), S(8)) rowSOBtns:SetTall(S(30)) rowSOBtns.Paint = function() end
+    local soSave = vgui.Create("DButton", rowSOBtns)
+    soSave:Dock(LEFT) soSave:SetWide(S(240)) soSave:SetText("Enregistrer les stats forcées")
+    UI.SkinButton(soSave, "gold")
+    soSave.DoClick = function()
+        local _, slot = soSlot:GetSelected()
+        local function pi(e) local v = string.Trim(e:GetValue() or "") if v == "" then return -1 end return math.floor(tonumber(v) or -1) end
+        local function pf(e) local v = string.Trim(e:GetValue() or "") if v == "" then return -1 end return tonumber(v) or -1 end
+        net.Start("origines_set_statoverride")
+        net.WriteString(sidEntry:GetValue() or "")
+        net.WriteUInt(tonumber(slot) or 1, 8)
+        net.WriteInt(pi(soHp), 32)
+        net.WriteInt(pi(soArmor), 32)
+        net.WriteFloat(pf(soSpeed))
+        net.SendToServer()
+        timer.Simple(0.15, soQuery)
+    end
+    local soClear = vgui.Create("DButton", rowSOBtns)
+    soClear:Dock(FILL) soClear:DockMargin(S(8), 0, 0, 0) soClear:SetText("Effacer (auto)")
+    UI.SkinButton(soClear, "blood")
+    soClear.DoClick = function()
+        local _, slot = soSlot:GetSelected()
+        net.Start("origines_clear_statoverride")
+        net.WriteString(sidEntry:GetValue() or "")
+        net.WriteUInt(tonumber(slot) or 1, 8)
+        net.SendToServer()
+        soHp:SetText("") soArmor:SetText("") soSpeed:SetText("")
+        timer.Simple(0.15, soQuery)
+    end
 end
 
 -- Enregistrement idempotent (évite un doublon au rechargement du fichier).
