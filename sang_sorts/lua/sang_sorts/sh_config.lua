@@ -87,6 +87,44 @@ C.Temporelle = {
     Sound       = "ambient/levels/labs/electric_explosion1.wav",
 }
 
+----------------------------------------------------------------------
+-- NOUVEAUX SORTS (particules GMod temporaires — seront remplacées).
+--   Couleurs d'école : Arcanique = VIOLET, Temporelle = BLEU.
+----------------------------------------------------------------------
+C.ColArcane = Color(150, 60, 220)   -- violet
+C.ColTemps  = Color(80, 160, 255)   -- bleu
+
+-- A1 Trait Arcanique : projectile en ligne droite, dégâts magiques.
+C.ArcTrait     = { Mana = 15, Cooldown = 3, Speed = 2800, Damage = 20 }
+-- A2 Répulsion : onde de choc autour de soi (repousse + petits dégâts).
+C.ArcRepulsion = { Mana = 25, Cooldown = 8, Radius = 260, Damage = 15, Force = 680 }
+-- A3 Bouclier Arcanique : figé + invulnérable pendant la durée du sort.
+C.ArcBouclier  = { Mana = 30, Cooldown = 14, Duration = 5 }
+-- A6 Chaînes Arcaniques : à l'impact, repousse les alentours puis root la cible.
+C.ArcChaines   = { Mana = 30, Cooldown = 12, Speed = 2400, RootDur = 3,
+                   PushRadius = 190, PushForce = 620 }
+-- A8 Bond Arcanique : dash court instantané dans la direction visée.
+C.ArcBond      = { Mana = 12, Cooldown = 5, Dist = 460 }
+
+-- T1 Célérité : auto-buff vitesse/saut + cooldowns réduits.
+C.TmpCelerite  = { Mana = 25, Cooldown = 15, Duration = 10, SpeedMul = 1.4,
+                   JumpMul = 1.3, HasteCD = 0.6 }
+-- T2 Lenteur : projectile qui ralentit fortement la cible touchée.
+C.TmpLenteur   = { Mana = 25, Cooldown = 8, Speed = 2700, SlowFactor = 0.45, SlowDur = 5 }
+-- T3 Rembobinage : encre temporelle (pose puis retour ; voir sp_tmp_rembobinage).
+C.TmpRembob    = { Mana = 40, PlaceCooldown = 60, InkLife = 30, MinReturn = 15 }
+-- T4 Écho Temporel : dash rapide + bref instant d'invulnérabilité.
+C.TmpEcho      = { Mana = 20, Cooldown = 6, DashForce = 700, Invuln = 0.6 }
+-- T5 Bulle de Lenteur : zone qui ralentit tout ce qui est dedans.
+C.TmpBulle     = { Mana = 45, Cooldown = 16, Radius = 260, SlowFactor = 0.4, Duration = 6 }
+-- T7 Stase sur soi : figé + invulnérable (clutch), court.
+C.TmpStase     = { Mana = 30, Cooldown = 20, Duration = 3 }
+-- T8 Bouclier temporel : bulle posée sur place, tu peux bouger, protège dedans.
+C.TmpBouclier  = { Mana = 40, Cooldown = 18, Radius = 230, Duration = 8 }
+-- T9 Corrosion : gros projectile -> explose en zone de dégâts magiques/s.
+C.TmpCorrosion = { Mana = 30, Cooldown = 10, Speed = 2000, Radius = 190,
+                   DamagePerSec = 4, Duration = 6 }
+
 -- Sort « Boule de Feu » (Élémentaire) : orbite -> lancée -> explosion
 C.Elementaire = {
     Mana        = 45, Cooldown = 10,

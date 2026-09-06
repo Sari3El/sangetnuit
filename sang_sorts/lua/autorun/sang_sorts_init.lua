@@ -18,6 +18,21 @@ local MODULES = {
     { "sang_sorts/sp_necrotique.lua",   "sh" }, -- Magie Nécrotique (dégâts de zone)
     { "sang_sorts/sp_temporelle.lua",   "sh" }, -- Magie Temporelle (stop-time)
     { "sang_sorts/sp_elementaire.lua",  "sh" }, -- Magie Élémentaire (boule de feu)
+    -- Nouveaux sorts Arcaniques (violet) :
+    { "sang_sorts/sp_arc_trait.lua",     "sh" }, -- A1 Trait Arcanique
+    { "sang_sorts/sp_arc_repulsion.lua", "sh" }, -- A2 Répulsion
+    { "sang_sorts/sp_arc_bouclier.lua",  "sh" }, -- A3 Bouclier Arcanique
+    { "sang_sorts/sp_arc_chaines.lua",   "sh" }, -- A6 Chaînes Arcaniques
+    { "sang_sorts/sp_arc_bond.lua",      "sh" }, -- A8 Bond Arcanique
+    -- Nouveaux sorts Temporels (bleu) :
+    { "sang_sorts/sp_tmp_celerite.lua",  "sh" }, -- T1 Célérité
+    { "sang_sorts/sp_tmp_lenteur.lua",   "sh" }, -- T2 Lenteur
+    { "sang_sorts/sp_tmp_rembobinage.lua","sh" },-- T3 Rembobinage
+    { "sang_sorts/sp_tmp_echo.lua",      "sh" }, -- T4 Écho Temporel
+    { "sang_sorts/sp_tmp_bulle.lua",     "sh" }, -- T5 Bulle de Lenteur
+    { "sang_sorts/sp_tmp_stase.lua",     "sh" }, -- T7 Stase Temporelle
+    { "sang_sorts/sp_tmp_bouclier.lua",  "sh" }, -- T8 Bouclier Temporel
+    { "sang_sorts/sp_tmp_corrosion.lua", "sh" }, -- T9 Corrosion Temporelle
     { "sang_sorts/cl_hide.lua",         "cl" }, -- masque les sorts vanilla (client)
 }
 

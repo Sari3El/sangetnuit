@@ -101,7 +101,7 @@ SANGSPELL.PrepareSpell(Spell, {
     category  = "Magie Arcanique",
     mana      = C.Mana or 15,
     cooldown  = C.Cooldown or 6,
-    color     = Color(130, 120, 255),
+    color     = Color(150, 60, 220), -- violet (école Arcanique)
     icon      = "vgui/entities/entity_hpwand_spell_apparition",
     whatToSay = "Translocation",
 })

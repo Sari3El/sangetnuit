@@ -48,7 +48,7 @@ end
 SANGSPELL.PrepareSpell(Spell, {
     category  = "Magie Temporelle",
     mana      = C.Mana, cooldown = C.Cooldown,
-    color     = Color(90, 170, 255),
+    color     = Color(80, 160, 255), -- bleu (école Temporelle)
     icon      = "vgui/entities/entity_hpwand_spell_timesum",
     whatToSay = "Arrêt du Temps",
 })

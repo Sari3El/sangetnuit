@@ -178,7 +178,9 @@ function SANGSPELL.PrepareSpell(Spell, opts)
             end
 
             -- 3) Arme le cooldown de ce sort (le lancer va avoir lieu).
-            ply.SangSpellCD[self.Name] = CurTime() + (self.SangCooldown or 0)
+            --    Réduit par la Hâte (T1 Célérité) si active.
+            local cd = (self.SangCooldown or 0) * (ply.SangHasteCD or 1)
+            ply.SangSpellCD[self.Name] = CurTime() + cd
         end
         if userPre then return userPre(self, wand) end
         return true
@@ -222,5 +224,117 @@ if SERVER then
             end
         end
         return out
+    end
+
+    ----------------------------------------------------------------------
+    -- Type de dégâts « magique » (respecte la résistance magique de race).
+    ----------------------------------------------------------------------
+    SANGSPELL.MAGIC = DMG_SHOCK
+
+    ----------------------------------------------------------------------
+    -- RALENTISSEMENT : réduit la vitesse d'une cible pendant `dur` s.
+    --   Joueurs : on baisse walk/run puis on restaure. PNJ/objets : un timer
+    --   bride la vitesse en la multipliant par `factor` à chaque tick.
+    ----------------------------------------------------------------------
+    function SANGSPELL.ApplySlow(ent, factor, dur)
+        if not IsValid(ent) then return end
+        factor = math.Clamp(factor or 0.5, 0.05, 1)
+        dur = dur or 4
+        local id = "SangSlow_" .. ent:EntIndex()
+
+        if ent:IsPlayer() then
+            if not ent.SangSlowBase then
+                ent.SangSlowBase = { w = ent:GetWalkSpeed(), r = ent:GetRunSpeed() }
+            end
+            ent:SetWalkSpeed(math.max(1, math.Round(ent.SangSlowBase.w * factor)))
+            ent:SetRunSpeed(math.max(1, math.Round(ent.SangSlowBase.r * factor)))
+            timer.Create(id, dur, 1, function()
+                if IsValid(ent) and ent.SangSlowBase then
+                    ent:SetWalkSpeed(ent.SangSlowBase.w)
+                    ent:SetRunSpeed(ent.SangSlowBase.r)
+                    ent.SangSlowBase = nil
+                end
+            end)
+        else
+            local stop = CurTime() + dur
+            timer.Create(id, 0.05, 0, function()
+                if not IsValid(ent) or CurTime() >= stop then
+                    if timer.Exists(id) then timer.Remove(id) end
+                    return
+                end
+                ent:SetVelocity(ent:GetVelocity() * factor) -- bride la vitesse
+            end)
+        end
+    end
+
+    ----------------------------------------------------------------------
+    -- IMMOBILISATION (root) : la cible ne peut plus se déplacer `dur` s.
+    --   Pas d'invulnérabilité. Joueurs : Freeze + MOVETYPE_NONE. PNJ :
+    --   MOVETYPE_NONE + NextThink repoussé (fige l'IA), restauré à la fin.
+    ----------------------------------------------------------------------
+    function SANGSPELL.Root(ent, dur)
+        if not IsValid(ent) then return end
+        dur = dur or 3
+        local id = "SangRoot_" .. ent:EntIndex()
+
+        if ent:IsPlayer() then
+            local mv = ent:GetMoveType()
+            ent:Freeze(true)
+            ent:SetMoveType(MOVETYPE_NONE)
+            timer.Create(id, dur, 1, function()
+                if IsValid(ent) then ent:Freeze(false) ent:SetMoveType(mv or MOVETYPE_WALK) end
+            end)
+        elseif ent:IsNPC() then
+            local mv = ent:GetMoveType()
+            ent:SetMoveType(MOVETYPE_NONE)
+            ent:NextThink(CurTime() + dur + 0.1)
+            timer.Create(id, dur, 1, function()
+                if IsValid(ent) then ent:SetMoveType(mv or MOVETYPE_STEP) ent:NextThink(CurTime()) end
+            end)
+        end
+    end
+
+    ----------------------------------------------------------------------
+    -- STASE SUR SOI : le joueur est figé et (option) invulnérable `dur` s.
+    ----------------------------------------------------------------------
+    function SANGSPELL.SelfStasis(ply, dur, invuln)
+        if not IsValid(ply) or not ply:IsPlayer() then return end
+        dur = dur or 3
+        local mv = ply:GetMoveType()
+        ply:Freeze(true)
+        ply:SetMoveType(MOVETYPE_NONE)
+        if invuln then ply:GodEnable() end
+        local id = "SangStasis_" .. ply:EntIndex()
+        timer.Create(id, dur, 1, function()
+            if IsValid(ply) then
+                ply:Freeze(false)
+                ply:SetMoveType(mv or MOVETYPE_WALK)
+                if invuln then ply:GodDisable() end
+            end
+        end)
+    end
+
+    ----------------------------------------------------------------------
+    -- REPOUSSE : éjecte joueurs/PNJ/objets autour de `pos` (force radiale).
+    --   `exclude` = entité à ignorer (souvent le lanceur ou la cible).
+    ----------------------------------------------------------------------
+    function SANGSPELL.Repulse(pos, radius, force, exclude)
+        force = force or 500
+        for _, e in ipairs(ents.FindInSphere(pos, radius)) do
+            if IsValid(e) and e ~= exclude and string.sub(e:GetClass(), 1, 5) ~= "sang_" then
+                local dir = (e:WorldSpaceCenter() - pos)
+                if dir:LengthSqr() < 1 then dir = VectorRand() end
+                dir:Normalize()
+                local push = dir * force + Vector(0, 0, force * 0.35)
+                if e:IsPlayer() then
+                    e:SetVelocity(push)
+                elseif e:IsNPC() then
+                    e:SetVelocity(push)
+                else
+                    local phys = e:GetPhysicsObject()
+                    if IsValid(phys) then phys:ApplyForceCenter(push * phys:GetMass()) end
+                end
+            end
+        end
     end
 end
