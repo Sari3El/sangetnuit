@@ -65,12 +65,13 @@ local function buildConfigPerso(f)
     local soHp    = soField("PV forcés :")
     local soArmor = soField("Armure forcée :")
     local soSpeed = soField("Vitesse forcée (×, ex. 1.3) :")
+    local soMana  = soField("Mana (réservoir, 0 = aucune) :")
 
     local soInfo = vgui.Create("DLabel", body)
     soInfo:Dock(TOP) soInfo:DockMargin(0, S(2), S(6), S(4)) soInfo:SetTall(S(20))
     soInfo:SetFont("SangUI_Small") soInfo:SetTextColor(C.goldLt)
     soInfo:SetText("Actuel — sélectionne un joueur, un slot et un job")
-    BLOOD._soFields = { hp = soHp, armor = soArmor, speed = soSpeed, info = soInfo }
+    BLOOD._soFields = { hp = soHp, armor = soArmor, speed = soSpeed, mana = soMana, info = soInfo }
 
     local function selSlot() local _, s = soSlot:GetSelected() return tonumber(s) or 1 end
     local function selJob()
@@ -109,6 +110,7 @@ local function buildConfigPerso(f)
         net.WriteInt(pi(soHp), 32)
         net.WriteInt(pi(soArmor), 32)
         net.WriteFloat(pf(soSpeed))
+        net.WriteInt(pi(soMana), 32)
         net.SendToServer()
         timer.Simple(0.15, soQuery)
     end
@@ -121,7 +123,7 @@ local function buildConfigPerso(f)
         net.WriteUInt(selSlot(), 8)
         net.WriteString(selJob())
         net.SendToServer()
-        soHp:SetText("") soArmor:SetText("") soSpeed:SetText("")
+        soHp:SetText("") soArmor:SetText("") soSpeed:SetText("") soMana:SetText("")
         timer.Simple(0.15, soQuery)
     end
 end

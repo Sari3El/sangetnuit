@@ -80,15 +80,18 @@ net.Receive("origines_statoverride_info", function()
     local hp    = net.ReadInt(32)
     local armor = net.ReadInt(32)
     local speed = net.ReadFloat()
+    local mana  = net.ReadInt(32)
     local f = BLOOD._soFields
     if not (f and IsValid(f.info)) then return end
     if IsValid(f.hp)    then f.hp:SetText(hp >= 0 and tostring(hp) or "") end
     if IsValid(f.armor) then f.armor:SetText(armor >= 0 and tostring(armor) or "") end
     if IsValid(f.speed) then f.speed:SetText(speed >= 0 and string.format("%.2f", speed) or "") end
-    f.info:SetText(("Actuel — slot %d / job %s : PV %s · Armure %s · Vitesse %s"):format(slot, job,
+    if IsValid(f.mana)  then f.mana:SetText(mana >= 0 and tostring(mana) or "") end
+    f.info:SetText(("Actuel — slot %d / job %s : PV %s · Armure %s · Vitesse %s · Mana %s"):format(slot, job,
         hp >= 0 and tostring(hp) or "auto",
         armor >= 0 and tostring(armor) or "auto",
-        speed >= 0 and ("×" .. string.format("%.2f", speed)) or "auto"))
+        speed >= 0 and ("×" .. string.format("%.2f", speed)) or "auto",
+        mana >= 0 and tostring(mana) or "auto"))
 end)
 
 -- Info live d'un slot (nom / race / covan) — section « Définir une race »

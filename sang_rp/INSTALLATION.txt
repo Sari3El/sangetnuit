@@ -1,0 +1,35 @@
+==========================================================================
+  SANG ET NUIT — CHAT RP (addon séparé)
+==========================================================================
+
+Addon INDÉPENDANT (aucune dépendance obligatoire). Transforme le chat en
+chat RP local et ajoute les commandes /me, /it et /roll.
+
+--------------------------------------------------------------------------
+INSTALLATION
+--------------------------------------------------------------------------
+Copie le dossier "sang_rp" dans :
+    garrysmod/addons/
+
+--------------------------------------------------------------------------
+COMMANDES
+--------------------------------------------------------------------------
+- (parole normale)   -> chat IC LOCAL : seuls les joueurs proches te voient.
+- /me <action>       -> action RP locale (violet). Ex : /me dégaine son épée.
+- /it <description>  -> description locale, sans nom (bleu).
+                        Ex : /it Une porte grince au loin.
+- /roll [XdY]        -> lance des dés (défaut 1d100). Ex : /roll   ou  /roll 2d6.
+- // <texte>         -> OOC global (hors-RP), visible par tout le monde.
+- /ooc <texte>       -> pareil que //.
+- /rphelp            -> rappel des commandes.
+
+Les commandes admin (!origines...) et les autres "/xxx" (ex : /origines)
+continuent de fonctionner normalement.
+
+--------------------------------------------------------------------------
+RÉGLAGES  (lua/sang_rp/sh_config.lua)
+--------------------------------------------------------------------------
+- RangeIC / RangeMe / RangeRoll : portées (unités source).
+- MaxLen  : longueur max d'un message.
+- EnableOOC : activer/désactiver le OOC global (// et /ooc).
+==========================================================================

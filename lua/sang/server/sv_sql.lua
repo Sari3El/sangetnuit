@@ -78,37 +78,48 @@ function BLOOD.SQL.Init()
         hp        INTEGER NOT NULL DEFAULT -1,
         armor     INTEGER NOT NULL DEFAULT -1,
         speed     REAL    NOT NULL DEFAULT -1,
+        mana      INTEGER NOT NULL DEFAULT -1,
         PRIMARY KEY (steamid64, slot, job)
     );]])
+    -- Migration : ajoute la colonne 'mana' aux tables déjà en 'job' sans mana.
+    local soCols2 = sql.Query("PRAGMA table_info(blood_statoverride);")
+    if istable(soCols2) then
+        local hasMana = false
+        for _, c in ipairs(soCols2) do if c.name == "mana" then hasMana = true break end end
+        if not hasMana then
+            sql.Query("ALTER TABLE blood_statoverride ADD COLUMN mana INTEGER NOT NULL DEFAULT -1;")
+        end
+    end
 end
 
 ----------------------------------------------------------------------
 -- Stats forcées par (joueur, slot)
 ----------------------------------------------------------------------
 
---- Renvoie { hp=, armor=, speed= } pour (joueur, slot, job) ; nil = non défini.
+--- Renvoie { hp=, armor=, speed=, mana= } pour (joueur, slot, job) ; nil = non défini.
 function BLOOD.SQL.GetStatOverride(sid64, slot, job)
-    local rows = sql.Query("SELECT hp, armor, speed FROM blood_statoverride WHERE steamid64 = "
+    local rows = sql.Query("SELECT hp, armor, speed, mana FROM blood_statoverride WHERE steamid64 = "
         .. E(sid64) .. " AND slot = " .. N(slot) .. " AND job = " .. E(tostring(job or "")) .. ";")
     if istable(rows) and rows[1] then
         local r = rows[1]
-        local hp, ar, sp = tonumber(r.hp), tonumber(r.armor), tonumber(r.speed)
+        local hp, ar, sp, mn = tonumber(r.hp), tonumber(r.armor), tonumber(r.speed), tonumber(r.mana)
         return {
             hp    = (hp and hp >= 0) and hp or nil,
             armor = (ar and ar >= 0) and ar or nil,
             speed = (sp and sp >= 0) and sp or nil,
+            mana  = (mn and mn >= 0) and mn or nil,
         }
     end
     return {}
 end
 
 --- Écrit l'override (-1 = non défini). speed est un multiplicateur (REAL).
-function BLOOD.SQL.SetStatOverride(sid64, slot, job, hp, armor, speed)
+function BLOOD.SQL.SetStatOverride(sid64, slot, job, hp, armor, speed, mana)
     local sp = tonumber(speed)
     sp = (sp and sp >= 0) and sp or -1
-    sql.Query("INSERT OR REPLACE INTO blood_statoverride (steamid64, slot, job, hp, armor, speed) VALUES ("
+    sql.Query("INSERT OR REPLACE INTO blood_statoverride (steamid64, slot, job, hp, armor, speed, mana) VALUES ("
         .. E(sid64) .. ", " .. N(slot) .. ", " .. E(tostring(job or "")) .. ", "
-        .. N(hp) .. ", " .. N(armor) .. ", " .. string.format("%f", sp) .. ");")
+        .. N(hp) .. ", " .. N(armor) .. ", " .. string.format("%f", sp) .. ", " .. N(mana) .. ");")
 end
 
 function BLOOD.SQL.ClearStatOverride(sid64, slot, job)

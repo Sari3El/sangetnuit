@@ -1,0 +1,6 @@
+{
+    "title": "Sang et Nuit — Chat RP (/me /it /roll + local)",
+    "type": "servercontent",
+    "tags": ["roleplay", "fun"],
+    "ignore": ["*.md", "*.txt", ".git/*", ".gitignore"]
+}

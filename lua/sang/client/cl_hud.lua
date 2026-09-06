@@ -172,15 +172,11 @@ hook.Add("HUDPaint", "BLOOD_HUD", function()
     UI.Bar(bx, by, bw, barH, anim.armor, C.steel, C.steelLt, "Armure", ar .. " / " .. arMax)
     by = by + barH + gap
 
-    -- Mana (Sorcier uniquement — sinon l'emplacement reste vide)
-    if isSorcier then
-        local manaMax = ply:GetNWInt("blood_mana_max", 0)
-        local manaCur
-        if manaMax <= 0 then
-            manaMax, manaCur = 100, 100 -- placeholder tant que le module Sorcier n'est pas branché
-        else
-            manaCur = ply:GetNWInt("blood_mana", 0)
-        end
+    -- Mana : affichée dès que le joueur a un réservoir (> 0), via la config
+    -- forcée ou (à venir) le module Sorcier — plus réservé au seul Sorcier.
+    local manaMax = ply:GetNWInt("blood_mana_max", 0)
+    if manaMax > 0 then
+        local manaCur = ply:GetNWInt("blood_mana", manaMax)
         anim.mana = Lerp(FrameTime() * 8, anim.mana, math.Clamp(manaCur / manaMax, 0, 1))
         UI.Bar(bx, by, bw, barH, anim.mana, C.mana, C.manaLt, "Mana", manaCur .. " / " .. manaMax)
     end

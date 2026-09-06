@@ -275,6 +275,7 @@ local function sendStatOverride(ply, sid, slot, job)
         net.WriteInt(ov.hp or -1, 32)
         net.WriteInt(ov.armor or -1, 32)
         net.WriteFloat(ov.speed or -1)
+        net.WriteInt(ov.mana or -1, 32)
     net.Send(ply)
 end
 
@@ -296,15 +297,16 @@ BLOOD.NetReceive("origines_set_statoverride", 0.3, function(_, ply)
     local hp    = net.ReadInt(32)
     local armor = net.ReadInt(32)
     local speed = net.ReadFloat()
+    local mana  = net.ReadInt(32)
 
     if not sid then BLOOD.Notify(ply, "SteamID invalide.", "error") return end
     if slot < 1 or slot > C.MaxSlots then BLOOD.Notify(ply, "Slot invalide.", "error") return end
     if job == "" then BLOOD.Notify(ply, "Job invalide.", "error") return end
 
-    BLOOD.SQL.SetStatOverride(sid, slot, job, hp, armor, speed)
+    BLOOD.SQL.SetStatOverride(sid, slot, job, hp, armor, speed, mana)
     reapplyIfActive(sid, slot)
     logAdmin(ply:Nick() .. " (" .. ply:SteamID64() .. ") a réglé les stats forcées de " .. sid
-        .. " slot " .. slot .. " job " .. job .. " (hp=" .. hp .. " armor=" .. armor .. " speed=" .. speed .. ")")
+        .. " slot " .. slot .. " job " .. job .. " (hp=" .. hp .. " armor=" .. armor .. " speed=" .. speed .. " mana=" .. mana .. ")")
     BLOOD.Notify(ply, "Stats forcées enregistrées (" .. sid .. " slot " .. slot .. " / " .. job .. ").", "info")
     sendStatOverride(ply, sid, slot, job)
 end)

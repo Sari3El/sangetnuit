@@ -219,6 +219,13 @@ function BLOOD.ApplyComputedStats(ply, fullHeal)
     ply:SetWalkSpeed(walk)
     ply:SetRunSpeed(run)
 
+    -- Mana : réservoir affiché par le HUD (0 = pas de mana). Alimenté par la
+    -- config forcée « Mana » (par slot+job) ; le futur module Sorcier pourra
+    -- la consommer. Sans conso pour l'instant : toujours pleine.
+    local manaMax = math.max(0, ov.mana or 0)
+    ply:SetNWInt("blood_mana_max", manaMax)
+    ply:SetNWInt("blood_mana", manaMax)
+
     if C.EnforceDefaultJump then ply:SetJumpPower(C.DefaultJumpPower) end
 end
 
