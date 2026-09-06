@@ -38,8 +38,6 @@ function SJOB.OpenF4()
             draw.SimpleText(job.desc or "", "SangUI_Small", S(16), S(40), C.txtDim, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
             local fac = SJOB.Config.FactionNames[job.faction] or job.faction
             draw.SimpleText("Faction : " .. fac, "SangUI_Small", S(16), S(60), C.txt, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
-            local stats = "PV " .. job.hp .. "   ·   Armure " .. job.armor .. "   ·   Vitesse ×" .. job.speed
-            draw.SimpleText(stats, "SangUI_Body", w - S(220), h / 2, C.goldLt, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
         end
 
         local btn = vgui.Create("DButton", row)
