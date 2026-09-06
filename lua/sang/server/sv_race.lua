@@ -193,10 +193,12 @@ function BLOOD.ApplyComputedStats(ply, fullHeal)
     local walk  = math.max(1, math.Round(s.baseWalk * s.speedMul))
     local run   = math.max(1, math.Round(s.baseRun * s.speedMul))
 
-    -- Stats FORCÉES par (joueur, slot) : remplacent les valeurs finales
-    -- (au-dessus de job/race/niveau). Vide = automatique.
+    -- Stats FORCÉES par (joueur, slot, JOB courant) : remplacent les valeurs
+    -- finales (au-dessus de job/race/niveau). Ne s'appliquent que si le joueur
+    -- est sur ce slot ET dans ce job. Vide = automatique.
+    local curJob = ply:GetNWString("sang_job", "")
     local ov = BLOOD.SQL.GetStatOverride
-        and BLOOD.SQL.GetStatOverride(ply:SteamID64(), ply.BloodActiveSlot or 1) or {}
+        and BLOOD.SQL.GetStatOverride(ply:SteamID64(), ply.BloodActiveSlot or 1, curJob) or {}
     if ov.hp then maxhp = math.max(1, math.floor(ov.hp)) end
     if ov.armor then armor = math.max(0, math.floor(ov.armor)) end
     if ov.speed then

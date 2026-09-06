@@ -76,6 +76,7 @@ end
 net.Receive("origines_statoverride_info", function()
     local sid   = net.ReadString()
     local slot  = net.ReadUInt(8)
+    local job   = net.ReadString()
     local hp    = net.ReadInt(32)
     local armor = net.ReadInt(32)
     local speed = net.ReadFloat()
@@ -84,7 +85,7 @@ net.Receive("origines_statoverride_info", function()
     if IsValid(f.hp)    then f.hp:SetText(hp >= 0 and tostring(hp) or "") end
     if IsValid(f.armor) then f.armor:SetText(armor >= 0 and tostring(armor) or "") end
     if IsValid(f.speed) then f.speed:SetText(speed >= 0 and string.format("%.2f", speed) or "") end
-    f.info:SetText(("Actuel — slot %d : PV %s · Armure %s · Vitesse %s"):format(slot,
+    f.info:SetText(("Actuel — slot %d / job %s : PV %s · Armure %s · Vitesse %s"):format(slot, job,
         hp >= 0 and tostring(hp) or "auto",
         armor >= 0 and tostring(armor) or "auto",
         speed >= 0 and ("×" .. string.format("%.2f", speed)) or "auto"))
