@@ -186,7 +186,10 @@ SLVL.NetReceive("slvl_respec", 1.0, function(_, ply)
     ply.SLVL.reset = ply.SLVL.reset - 1
     ply.SLVL.force, ply.SLVL.resist, ply.SLVL.agilite, ply.SLVL.vitalite = 0, 0, 0, 0
     SLVL.Save(ply)
-    if BLOOD.ApplyComputedStats then BLOOD.ApplyComputedStats(ply, true) end
+    -- RAFRAÎCHISSEMENT (pas de soin) : les max PV/vitesse baissent (points
+    -- remis à 0) mais on garde les PV/mana courants (bornés au nouveau max).
+    if BLOOD.RefreshStats then BLOOD.RefreshStats(ply)
+    elseif BLOOD.ApplyComputedStats then BLOOD.ApplyComputedStats(ply, false) end
     SLVL.Sync(ply)
     notify(ply, "Tes points ont été réinitialisés.", "info")
 end)
@@ -216,7 +219,9 @@ local function adminCommit(sid, slot, d)
         ply.SLVL = d
         ply.SLVLSlot = slot
         SLVL.SQL.Set(sid, slot, d)
-        if BLOOD.ApplyComputedStats then BLOOD.ApplyComputedStats(ply, true) end
+        -- Changement admin (niveau/points) : on rafraîchit les max sans soigner.
+        if BLOOD.RefreshStats then BLOOD.RefreshStats(ply)
+        elseif BLOOD.ApplyComputedStats then BLOOD.ApplyComputedStats(ply, false) end
         SLVL.Sync(ply)
     else
         SLVL.SQL.Set(sid, slot, d)

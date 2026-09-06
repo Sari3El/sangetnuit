@@ -181,8 +181,14 @@ function BLOOD.ComputeStats(ply)
     return stats
 end
 
---- Applique les stats calculées. fullHeal=true met les PV au max (spawn/reroll/
---  changement) ; false conserve les PV courants (ajoute juste le delta de max).
+--- Applique les stats calculées.
+--    fullHeal=true  : nouvelle vie (spawn/reroll) → PV et mana mis au MAX.
+--    fullHeal=false : simple RAFRAÎCHISSEMENT → on met à jour les MAX (PV,
+--                     armure, vitesse, mana max) MAIS on GARDE les valeurs
+--                     courantes. On ne rend RIEN. Seule exception : si un
+--                     nouveau max passe SOUS la valeur courante, on borne la
+--                     valeur courante à ce max (ex. 135 PV, max -> 100 => 100).
+--                     La faim n'est jamais touchée ici (elle est par-slot).
 function BLOOD.ApplyComputedStats(ply, fullHeal)
     if not IsValid(ply) or not ply:Alive() then return end
     local C = BLOOD.Config
@@ -206,12 +212,14 @@ function BLOOD.ApplyComputedStats(ply, fullHeal)
         run  = math.max(1, math.Round(s.baseRun * ov.speed))
     end
 
-    local oldMax, oldHP = ply:GetMaxHealth(), ply:Health()
+    local oldHP = ply:Health()
     ply:SetMaxHealth(maxhp)
     if fullHeal then
         ply:SetHealth(maxhp)
     else
-        ply:SetHealth(math.min(maxhp, oldHP + math.max(0, maxhp - oldMax)))
+        -- Rafraîchissement : on garde les PV courants, on borne juste au
+        -- nouveau max (si le max descend sous les PV actuels).
+        ply:SetHealth(math.min(oldHP, maxhp))
     end
 
     ply:SetArmor(armor)
@@ -221,15 +229,43 @@ function BLOOD.ApplyComputedStats(ply, fullHeal)
 
     -- Mana : réservoir (0 = pas de mana), alimenté par la config forcée
     -- « Mana » (par slot+job). Consommable par les sorts (BLOOD.TakeMana) et
-    -- régénéré par sv_mana. Plein au spawn (fullHeal), sinon borné au max.
+    -- régénéré par sv_mana.
+    --   fullHeal : plein.  Rafraîchissement : on garde la mana courante (rien
+    --   n'est rendu), simplement bornée au nouveau max.
     local manaMax = math.max(0, ov.mana or 0)
     ply:SetNWInt("blood_mana_max", manaMax)
-    local curMana = fullHeal and manaMax or math.min(ply.BloodMana or manaMax, manaMax)
+    local curMana = fullHeal and manaMax or math.min(ply.BloodMana or 0, manaMax)
     ply.BloodMana = curMana
     ply:SetNWInt("blood_mana", curMana)
 
     if C.EnforceDefaultJump then ply:SetJumpPower(C.DefaultJumpPower) end
 end
+
+----------------------------------------------------------------------
+-- Rafraîchir les stats d'un joueur SANS le soigner ni le faire respawn.
+--   Recalcule les MAX (PV/armure/vitesse/mana) depuis race+job+niveau+config
+--   et met à jour l'affichage, en gardant les valeurs courantes (bornées au
+--   nouveau max). À utiliser après un changement de job/niveau/config quand le
+--   joueur ne veut pas (ou n'a pas besoin de) respawn.
+----------------------------------------------------------------------
+function BLOOD.RefreshStats(ply)
+    if not IsValid(ply) or not ply:Alive() then return end
+    BLOOD.ApplyComputedStats(ply, false)
+    if BLOOD.SyncHungerNW then BLOOD.SyncHungerNW(ply) end
+    hook.Run("BLOOD_PostApplyStats", ply)
+end
+
+-- Commande joueur : actualiser SES stats (sans soin, sans respawn).
+--   Pratique quand un changement (job/config) n'a pas encore été appliqué.
+--   Sûr : ne peut que remettre les max corrects (aucun gain de PV/mana).
+concommand.Add("sang_refresh", function(ply)
+    if not IsValid(ply) or not ply:Alive() then return end
+    if BLOOD.HasCharacter and not BLOOD.HasCharacter(ply) then return end
+    if ply.BloodNextRefresh and CurTime() < ply.BloodNextRefresh then return end
+    ply.BloodNextRefresh = CurTime() + 1
+    BLOOD.RefreshStats(ply)
+    if BLOOD.Notify then BLOOD.Notify(ply, "Statistiques actualisées.", "info") end
+end)
 
 ----------------------------------------------------------------------
 -- Application des stats de la race active au joueur (spawn / changement)

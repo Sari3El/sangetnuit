@@ -67,11 +67,20 @@ function SLVL.RefreshStats()
 
     -- Réinitialisation (points de reset)
     local bottom = vgui.Create("DPanel", body)
-    bottom:Dock(BOTTOM) bottom:DockMargin(0, S(8), 0, 0) bottom:SetTall(S(56))
+    bottom:Dock(BOTTOM) bottom:DockMargin(0, S(8), 0, 0) bottom:SetTall(S(96))
     bottom.Paint = function(_, w, h)
         surface.SetDrawColor(C.goldDk); surface.DrawRect(0, 0, w, 1)
         draw.SimpleText("Points de reset : " .. d.reset, "SangUI_Body", 0, S(8), C.txtDim, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
     end
+
+    -- Actualiser ses stats (sans soin, sans respawn) — utile si un changement
+    -- de job/config n'a pas encore été appliqué.
+    local refresh = vgui.Create("DButton", bottom)
+    refresh:Dock(BOTTOM) refresh:DockMargin(0, S(4), 0, 0) refresh:SetTall(S(30))
+    refresh:SetText("Actualiser mes statistiques")
+    UI.SkinButton(refresh, "gold")
+    refresh.DoClick = function() RunConsoleCommand("sang_refresh") end
+
     local respec = vgui.Create("DButton", bottom)
     respec:Dock(BOTTOM) respec:DockMargin(0, S(4), 0, 0) respec:SetTall(S(32))
     respec:SetText("Réinitialiser mes points  (consomme 1 point de reset)")

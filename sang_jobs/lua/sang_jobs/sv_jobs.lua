@@ -115,10 +115,12 @@ SJOB.NetReceive("sjob_admin_setoverride", 0.3, function(_, ply)
     if not sid or not SJOB.JobExists(jobId) then return end
 
     SJOB.SQL.SetOverride(sid, jobId, hp, armor, speed)
-    -- Réapplique si le joueur est en ligne et joue ce job
+    -- Réapplique si le joueur est en ligne et joue ce job (max mis à jour,
+    -- sans soigner : on garde ses PV/mana courants).
     local target = BLOOD.GetPlayerBySteamID64(sid)
-    if IsValid(target) and target.SJob == jobId and BLOOD.ApplyComputedStats then
-        BLOOD.ApplyComputedStats(target, true)
+    if IsValid(target) and target.SJob == jobId then
+        if BLOOD.RefreshStats then BLOOD.RefreshStats(target)
+        elseif BLOOD.ApplyComputedStats then BLOOD.ApplyComputedStats(target, false) end
     end
     log(ply, "override job " .. jobId .. " de " .. sid .. " (hp=" .. hp .. " armor=" .. armor .. " speed=" .. speed .. ")")
     notify(ply, "Override enregistré (" .. sid .. " / " .. jobId .. ").", "info")
@@ -131,8 +133,9 @@ SJOB.NetReceive("sjob_admin_clearoverride", 0.3, function(_, ply)
     if not sid or not SJOB.JobExists(jobId) then return end
     SJOB.SQL.ClearOverride(sid, jobId)
     local target = BLOOD.GetPlayerBySteamID64(sid)
-    if IsValid(target) and target.SJob == jobId and BLOOD.ApplyComputedStats then
-        BLOOD.ApplyComputedStats(target, true)
+    if IsValid(target) and target.SJob == jobId then
+        if BLOOD.RefreshStats then BLOOD.RefreshStats(target)
+        elseif BLOOD.ApplyComputedStats then BLOOD.ApplyComputedStats(target, false) end
     end
     log(ply, "a effacé l'override job " .. jobId .. " de " .. sid)
     notify(ply, "Override effacé (" .. sid .. " / " .. jobId .. ").", "info")

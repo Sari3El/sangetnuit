@@ -281,8 +281,11 @@ end
 
 local function reapplyIfActive(sid, slot)
     local t = BLOOD.GetPlayerBySteamID64(sid)
-    if IsValid(t) and (t.BloodActiveSlot or 1) == slot and t:Alive() and BLOOD.ApplyComputedStats then
-        BLOOD.ApplyComputedStats(t, true) -- ApplyComputedStats relit le job courant
+    if IsValid(t) and (t.BloodActiveSlot or 1) == slot and t:Alive() then
+        -- Config Perso modifiée : on met à jour les MAX (PV/armure/vitesse/mana)
+        -- sans soigner — on garde les valeurs courantes (bornées au nouveau max).
+        if BLOOD.RefreshStats then BLOOD.RefreshStats(t)
+        elseif BLOOD.ApplyComputedStats then BLOOD.ApplyComputedStats(t, false) end
     end
 end
 
