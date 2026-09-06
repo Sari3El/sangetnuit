@@ -9,11 +9,16 @@ SANGSPELL.Config = SANGSPELL.Config or {}
 local C = SANGSPELL.Config
 
 -- Catégories de magie (affichées dans « All Spells », même vides).
+--   Le « Sang » (hémomancie) va dans Nécrotique ; Ombre = Ténèbres.
+--   Mental sera ajouté plus tard.
 C.Categories = {
     "Magie Sacré",
     "Magie Nécrotique",
     "Magie Druidique",
     "Magie Élémentaire",
+    "Magie des Ombres",
+    "Magie Arcanique",
+    "Magie Temporelle",
 }
 
 -- Masquer TOUS les sorts vanilla de HPW dans les menus (Tree + All Spells),
