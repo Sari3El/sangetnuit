@@ -1,0 +1,11 @@
+{
+    "title": "Sang et Nuit — Coup d'Expulsion (SWEP)",
+    "type": "weapon",
+    "tags": ["roleplay", "fun"],
+    "ignore": [
+        "*.md",
+        "*.txt",
+        ".git/*",
+        ".gitignore"
+    ]
+}
