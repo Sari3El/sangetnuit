@@ -15,7 +15,9 @@ ENT.Spawnable = false
 ENT.RenderGroup = RENDERGROUP_TRANSLUCENT
 
 function ENT:SetupDataTables()
-    self:NetworkVar("Float", 0, "SRadius")
+    self:NetworkVar("Float",  0, "SRadius")
+    self:NetworkVar("String", 0, "PartA")
+    self:NetworkVar("String", 1, "PartB")
 end
 
 if SERVER then
@@ -28,11 +30,13 @@ if SERVER then
         self:NextThink(CurTime())
     end
 
-    function ENT:SetupSphere(owner, radius, pushForce, dur)
+    function ENT:SetupSphere(owner, radius, pushForce, dur, partA, partB)
         self.SOwner  = owner
         self.Push    = pushForce or 650
         self:SetSRadius(radius or 150)
         self.DieTime = CurTime() + (dur or 15)
+        if partA then self:SetPartA(partA) end
+        if partB then self:SetPartB(partB) end
         self:SetParent(owner)
         self:SetLocalPos(Vector(0, 0, 40))
     end
@@ -63,8 +67,55 @@ if CLIENT then
 
     function ENT:Initialize()
         self:SetRenderBounds(-Vector(400, 400, 400), Vector(400, 400, 400))
+        self.Orbs = {}
     end
     function ENT:Draw() end
+
+    local function cfg(k) return SANGSPELL.Config and SANGSPELL.Config.Fx and SANGSPELL.Config.Fx[k] end
+
+    function ENT:Think()
+        -- Particules (feu / vent), attachées une fois.
+        if not self.Att then
+            local function att(p)
+                if p and p ~= "" then
+                    if SANGSPELL and SANGSPELL.ResolveParticle then p = SANGSPELL.ResolveParticle(p) end
+                    ParticleEffectAttach(p, PATTACH_ABSORIGIN_FOLLOW, self, 0)
+                end
+            end
+            att(self:GetPartA())
+            att(self:GetPartB())
+            self.Att = true
+        end
+
+        -- Modèles qui tournent autour (si un modèle est configuré).
+        local mdl = cfg("ElemSphereModel")
+        local r = self:GetSRadius()
+        if mdl and mdl ~= "" and r and r > 0 then
+            local num = cfg("ElemSphereModelCount") or 6
+            if #self.Orbs == 0 then
+                for i = 1, num do
+                    local m = ClientsideModel(mdl, RENDERGROUP_OPAQUE)
+                    if IsValid(m) then m:SetNoDraw(false) self.Orbs[i] = m end
+                end
+            end
+            local c = self:GetPos()
+            local orbR = r * 0.9
+            for i, m in ipairs(self.Orbs) do
+                if IsValid(m) then
+                    local a = CurTime() * 90 + (i / #self.Orbs) * 360
+                    local off = Vector(math.cos(math.rad(a)) * orbR, math.sin(math.rad(a)) * orbR,
+                        math.sin(math.rad(a * 2)) * (orbR * 0.35))
+                    m:SetPos(c + off)
+                    m:SetAngles(Angle(0, a * 2, a))
+                end
+            end
+        end
+    end
+
+    function ENT:OnRemove()
+        self:StopParticles()
+        for _, m in ipairs(self.Orbs or {}) do if IsValid(m) then m:Remove() end end
+    end
 
     function ENT:DrawTranslucent()
         local r = self:GetSRadius()

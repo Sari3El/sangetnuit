@@ -10,6 +10,7 @@ if not HpwRewrite then return end
 SANGSPELL = SANGSPELL or {}
 local C = (SANGSPELL.Config and SANGSPELL.Config.ElemSphere) or { Mana = 45, Cooldown = 25, Duration = 15, Radius = 150, PushForce = 650 }
 local COL = (SANGSPELL.Config and SANGSPELL.Config.ColElem) or Color(255, 140, 30)
+local FX = (SANGSPELL.Config and SANGSPELL.Config.Fx) or {}
 
 local function notify(ply, msg, kind)
     if BLOOD and BLOOD.Notify then BLOOD.Notify(ply, msg, kind or "info") else ply:ChatPrint("[Sang] " .. msg) end
@@ -48,7 +49,7 @@ if SERVER then
         if not IsValid(s) then return end
         s:SetPos(ply:WorldSpaceCenter())
         s:Spawn() s:Activate()
-        s:SetupSphere(ply, C.Radius, C.PushForce, C.Duration)
+        s:SetupSphere(ply, C.Radius, C.PushForce, C.Duration, FX.ElemSphereWind, FX.ElemSphereFire)
         ply.SangSphereEnt = s
         ply:GodEnable() ply.SangSphereGod = true
         ply:EmitSound("ambient/energy/whiteflash.wav", 80, 90)

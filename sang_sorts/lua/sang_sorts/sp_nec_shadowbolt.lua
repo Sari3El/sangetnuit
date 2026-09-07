@@ -8,6 +8,7 @@ if not HpwRewrite then return end
 SANGSPELL = SANGSPELL or {}
 local C = (SANGSPELL.Config and SANGSPELL.Config.NecShadowBolt) or { Mana = 25, Cooldown = 9, Speed = 2500, Damage = 12, BlindDur = 3, DotDps = 3, DotDur = 4 }
 local COL = (SANGSPELL.Config and SANGSPELL.Config.ColNecro) or Color(150, 20, 30)
+local FX = (SANGSPELL.Config and SANGSPELL.Config.Fx) or {}
 
 local function dot(owner, target, dps, dur)
     if not IsValid(target) then return end
@@ -37,7 +38,7 @@ function Spell:OnFire(wand)
     if not IsValid(b) then return false end
     b:Spawn() b:Activate()
     b:SetupBolt(ply, ply:GetAimVector(), {
-        speed = C.Speed, life = 4, color = Color(60, 20, 70), hitWorld = false,
+        speed = C.Speed, life = 4, color = Color(60, 20, 70), hitWorld = false, particle = FX.NecShadowFly,
         onHit = function(tr)
             local e = tr.Entity
             if not (IsValid(e) and (e:IsPlayer() or e:IsNPC())) then return end

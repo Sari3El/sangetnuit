@@ -58,8 +58,10 @@ C.Translocation = {
 -- ne seraient pas dans cruel_base*.pcf, auto-découverts). Ajoute ici le(s)
 -- fichier(s) manquant(s) si une particule ne s'affiche pas.
 C.ParticleFiles = {
-    "particles/cruel_base.pcf",   -- strange_portal, flamestrike, ...
-    "particles/cruel_base2.pcf",  -- golden_energy, ...
+    "particles/cruel_base.pcf",   -- strange_portal, flamestrike, cursed_*, electro_*, ...
+    "particles/cruel_base2.pcf",  -- golden_energy, ice_*, ...
+    "particles/vampirepcf.pcf",   -- [21]_hand_blast (rayon de sang)
+    "particles/vent.pcf",         -- feur (sphère de vent)
 }
 
 -- Sort « Sève Curative » (Druidique) : zone de SOIN au sol
@@ -182,6 +184,31 @@ C.DruidBark   = { Mana = 30, Cooldown = 14, ReflectPct = 0.4, Duration = 6 }
 C.DruidSpores = { Mana = 35, Cooldown = 12, Radius = 240, Dps = 4, Duration = 6 }
 -- D9 Symbiose : lien de SOIN vers un allié (miroir du Drain de Vie).
 C.DruidSymb   = { Mana = 30, Cooldown = 12, Speed = 2600, Duration = 8, MaxLink = 800, Hps = 6 }
+
+----------------------------------------------------------------------
+-- Particules/mode`les fournis par le joueur, rangés par sort. « [*]_ » est
+-- résolu automatiquement (préfixe inconnu). Modifie ici pour réassigner.
+----------------------------------------------------------------------
+C.Fx = {
+    ElemBoltFly    = "[1]_electro_beam_static",   -- E6 Foudre : traînée du projectile
+    ElemChainRing  = "[1]_electro_ring",          -- E1 Chaîne : cercle au sol par cible
+    ElemIceImpact  = "[4]_ice_judgmentcut_sphere",-- E2 Glace : impact
+    ElemWallZone   = "strange_portal_sparks",     -- E4 Mur de Feu : cercle d'étincelles ([*])
+    ElemMeteorFly  = "a_danse_lance",             -- E5 Météore : sphère de feu qui tombe
+    ElemGeyser     = "suiton_syphon2",            -- E8 Geyser : cercle d'eau
+    ElemSphereWind = "feur",                      -- E9 Sphère : vent
+    ElemSphereFire = "a_danse_lance",             -- E9 Sphère : feu
+    ElemSphereModel = "",                         -- E9 Sphère : modèle qui tourne (donne un .mdl)
+    ElemSphereModelCount = 6,                     -- E9 Sphère : combien de modèles
+    ElemRockModel  = "models/props_foliage/rock_forest01d.mdl", -- E7 Rocher : modèle
+
+    NecDrainFly    = "[21]_hand_blast",           -- N1 Drain : rayon de sang (projectile)
+    NecBloodFog    = "[0]_blood_fog",             -- N2 Explosion : brume de sang
+    NecBloodGround = "[5]_cursed_lake_add_2",     -- N2 Explosion : flamme noire au sol
+    NecShadowFly   = "[5]_cursed_aura_add_2",     -- N6 Nuée d'Ombres : sphère de ténèbres
+
+    DruidThornsZone = "grass",                    -- D1 Ronces : verdure au sol ([*])
+}
 
 -- Sort « Boule de Feu » (Élémentaire) : orbite -> lancée -> explosion
 C.Elementaire = {

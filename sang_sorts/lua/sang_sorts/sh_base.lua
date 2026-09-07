@@ -22,7 +22,8 @@ SANGSPELL = SANGSPELL or {}
 do
     local files = {}
     for _, f in ipairs((SANGSPELL.Config and SANGSPELL.Config.ParticleFiles) or {}) do files[f] = true end
-    local found = file.Find("particles/cruel_base*.pcf", "GAME")
+    -- Enregistre TOUS les .pcf trouvés (au cas où) + les fichiers explicites.
+    local found = file.Find("particles/*.pcf", "GAME")
     if istable(found) then for _, v in ipairs(found) do files["particles/" .. v] = true end end
     for f in pairs(files) do
         if file.Exists(f, "GAME") then
@@ -233,6 +234,13 @@ if SERVER then
 
     util.AddNetworkString("sang_blind") -- Nuée d'Ombres : assombrit l'écran
     util.AddNetworkString("sang_chain") -- Éclair en Chaîne : tracé de la foudre
+
+    --- Joue une particule ponctuelle à une position (résout « [*]_ » + réseau).
+    function SANGSPELL.PlayParticle(name, pos, ang)
+        if not name or name == "" then return end
+        if SANGSPELL.ResolveParticle then name = SANGSPELL.ResolveParticle(name) end
+        ParticleEffect(name, pos, ang or Angle(0, 0, 0))
+    end
 
     --- Sacrifie des PV du lanceur (hémomancie). Renvoie false si trop bas.
     function SANGSPELL.SacrificeHP(ply, amount)

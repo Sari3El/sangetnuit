@@ -8,6 +8,7 @@ if not HpwRewrite then return end
 SANGSPELL = SANGSPELL or {}
 local C = (SANGSPELL.Config and SANGSPELL.Config.NecBlood) or { Mana = 15, Cooldown = 10, HpCost = 15, Radius = 260, Damage = 45 }
 local COL = (SANGSPELL.Config and SANGSPELL.Config.ColNecro) or Color(150, 20, 30)
+local FX = (SANGSPELL.Config and SANGSPELL.Config.Fx) or {}
 
 local Spell = { }
 Spell.NodeOffset = Vector(0, 1500, 0)
@@ -34,6 +35,10 @@ function Spell:OnFire(wand)
         SANGSPELL.DealDamage(ply, e, C.Damage, SANGSPELL.MAGIC, ply)
     end
 
+    if SANGSPELL.PlayParticle then
+        if FX.NecBloodFog then SANGSPELL.PlayParticle(FX.NecBloodFog, pos) end
+        if FX.NecBloodGround then SANGSPELL.PlayParticle(FX.NecBloodGround, pos) end
+    end
     local ed = EffectData() ed:SetOrigin(pos) ed:SetScale(C.Radius) util.Effect("cball_explode", ed)
     local ed2 = EffectData() ed2:SetOrigin(pos) ed2:SetMagnitude(2) ed2:SetScale(2) ed2:SetRadius(C.Radius) util.Effect("BloodImpact", ed2)
     util.ScreenShake(pos, 8, 120, 0.8, C.Radius * 2.5)

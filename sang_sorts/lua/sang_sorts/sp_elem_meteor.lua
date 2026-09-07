@@ -8,6 +8,7 @@ if not HpwRewrite then return end
 SANGSPELL = SANGSPELL or {}
 local C = (SANGSPELL.Config and SANGSPELL.Config.ElemMeteor) or { Mana = 45, Cooldown = 16, Radius = 230, Damage = 55, Height = 1400, Speed = 2800 }
 local COL = (SANGSPELL.Config and SANGSPELL.Config.ColElem) or Color(255, 140, 30)
+local FX = (SANGSPELL.Config and SANGSPELL.Config.Fx) or {}
 
 local Spell = { }
 Spell.NodeOffset = Vector(600, 1200, 0)
@@ -41,7 +42,7 @@ function Spell:OnFire(wand)
         mb:SetPos(ground + Vector(0, 0, C.Height))
         mb:Spawn() mb:Activate()
         mb:SetupBolt(nil, Vector(0, 0, -1), {
-            speed = C.Speed, life = 3, color = COL,
+            speed = C.Speed, life = 3, color = COL, particle = FX.ElemMeteorFly,
             onHit = function(t) impact(t.HitPos) end,
             onExpire = function(p) impact(p) end,
         })

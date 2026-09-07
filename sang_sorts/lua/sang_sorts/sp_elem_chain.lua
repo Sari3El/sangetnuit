@@ -8,6 +8,7 @@ if not HpwRewrite then return end
 SANGSPELL = SANGSPELL or {}
 local C = (SANGSPELL.Config and SANGSPELL.Config.ElemChain) or { Mana = 25, Cooldown = 8, Damage = 25, Bounces = 3, JumpRange = 360, Falloff = 0.7, Range = 1500 }
 local COL = (SANGSPELL.Config and SANGSPELL.Config.ColElem) or Color(255, 140, 30)
+local FX = (SANGSPELL.Config and SANGSPELL.Config.Fx) or {}
 
 local Spell = { }
 Spell.NodeOffset = Vector(300, 1200, 0)
@@ -36,6 +37,7 @@ function Spell:OnFire(wand)
     for i = 1, C.Bounces + 1 do
         if not IsValid(cur) then break end
         SANGSPELL.DealDamage(ply, cur, dmg, SANGSPELL.MAGIC, ply)
+        if FX.ElemChainRing and SANGSPELL.PlayParticle then SANGSPELL.PlayParticle(FX.ElemChainRing, cur:GetPos()) end
         hit[cur] = true
         dmg = dmg * C.Falloff
 

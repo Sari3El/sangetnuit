@@ -7,6 +7,7 @@
 if not HpwRewrite then return end
 SANGSPELL = SANGSPELL or {}
 local C = (SANGSPELL.Config and SANGSPELL.Config.ElemGeyser) or { Mana = 30, Cooldown = 10, Radius = 170, Damage = 10, Launch = 780 }
+local FX = (SANGSPELL.Config and SANGSPELL.Config.Fx) or {}
 
 local Spell = { }
 Spell.NodeOffset = Vector(1200, 900, 0)
@@ -36,6 +37,9 @@ function Spell:OnFire(wand)
         end
     end
 
+    if FX.ElemGeyser and SANGSPELL.PlayParticle then
+        SANGSPELL.PlayParticle(FX.ElemGeyser, pos)
+    end
     local ed = EffectData() ed:SetOrigin(pos) ed:SetScale(2) ed:SetMagnitude(2) util.Effect("watersplash", ed)
     util.ScreenShake(pos, 5, 90, 0.5, C.Radius * 2)
     sound.Play("ambient/water/water_spray" .. math.random(1, 3) .. ".wav", pos, 80, 100)

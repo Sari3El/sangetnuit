@@ -6,6 +6,7 @@
 if not HpwRewrite then return end
 SANGSPELL = SANGSPELL or {}
 local C = (SANGSPELL.Config and SANGSPELL.Config.ElemIce) or { Mana = 20, Cooldown = 6, Speed = 2600, Damage = 20, SlowFactor = 0.35, SlowDur = 4 }
+local FX = (SANGSPELL.Config and SANGSPELL.Config.Fx) or {}
 
 local Spell = { }
 Spell.NodeOffset = Vector(300, 900, 0)
@@ -30,7 +31,11 @@ function Spell:OnFire(wand)
             if IsValid(e) and (e:IsPlayer() or e:IsNPC()) then
                 SANGSPELL.DealDamage(ply, e, C.Damage, SANGSPELL.MAGIC, ply)
                 if SANGSPELL.ApplySlow then SANGSPELL.ApplySlow(e, C.SlowFactor, C.SlowDur) end
-                local ed = EffectData() ed:SetOrigin(e:WorldSpaceCenter()) util.Effect("GlassImpact", ed)
+                if FX.ElemIceImpact and SANGSPELL.PlayParticle then
+                    SANGSPELL.PlayParticle(FX.ElemIceImpact, e:GetPos())
+                else
+                    local ed = EffectData() ed:SetOrigin(e:WorldSpaceCenter()) util.Effect("GlassImpact", ed)
+                end
             end
         end,
     })

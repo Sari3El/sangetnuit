@@ -19,6 +19,7 @@ ENT.RenderGroup = RENDERGROUP_TRANSLUCENT
 function ENT:SetupDataTables()
     self:NetworkVar("Float",  0, "ZRadius")
     self:NetworkVar("Vector", 0, "ZColor")
+    self:NetworkVar("String", 0, "ZPart")
 end
 
 if SERVER then
@@ -35,7 +36,7 @@ if SERVER then
 
     -- kind : "slow" | "corrosion". amount = dégâts/s (corrosion) ou facteur de
     -- ralentissement 0..1 (slow). color = teinte du dôme.
-    function ENT:SetupZone(owner, kind, radius, amount, duration, color)
+    function ENT:SetupZone(owner, kind, radius, amount, duration, color, particle)
         self.SOwner  = owner
         self.SKind   = kind or "corrosion"
         self.SAmount = amount or 3
@@ -43,6 +44,7 @@ if SERVER then
         self:SetZRadius(radius or 200)
         color = color or Color(120, 60, 220)
         self:SetZColor(Vector(color.r / 255, color.g / 255, color.b / 255))
+        if particle and particle ~= "" then self:SetZPart(particle) end
     end
 
     local function living(e)
@@ -113,8 +115,22 @@ if CLIENT then
 
     function ENT:Draw() end -- on ne dessine pas le modèle (plaque)
 
-    -- Dôme lumineux additif (placeholder).
+    function ENT:Think()
+        if not self.Att then
+            local p = self:GetZPart()
+            if p and p ~= "" then
+                if SANGSPELL and SANGSPELL.ResolveParticle then p = SANGSPELL.ResolveParticle(p) end
+                ParticleEffectAttach(p, PATTACH_ABSORIGIN_FOLLOW, self, 0)
+                self.Att = true
+            end
+        end
+    end
+
+    function ENT:OnRemove() self:StopParticles() end
+
+    -- Dôme lumineux additif (placeholder) — seulement si PAS de particule fournie.
     function ENT:DrawTranslucent()
+        if self:GetZPart() ~= "" then return end
         local r = self:GetZRadius()
         if not r or r <= 0 then return end
         local c = self:GetZColor()

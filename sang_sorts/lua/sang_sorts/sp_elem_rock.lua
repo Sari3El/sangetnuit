@@ -8,6 +8,7 @@ if not HpwRewrite then return end
 SANGSPELL = SANGSPELL or {}
 local C = (SANGSPELL.Config and SANGSPELL.Config.ElemRock) or { Mana = 25, Cooldown = 8, Speed = 2200, Damage = 30, Knockback = 950, Radius = 160 }
 local COL = (SANGSPELL.Config and SANGSPELL.Config.ColElem) or Color(255, 140, 30)
+local FX = (SANGSPELL.Config and SANGSPELL.Config.Fx) or {}
 
 local Spell = { }
 Spell.NodeOffset = Vector(900, 1200, 0)
@@ -27,7 +28,7 @@ function Spell:OnFire(wand)
     if not IsValid(b) then return false end
     b:Spawn() b:Activate()
     b:SetupBolt(ply, dir, {
-        speed = C.Speed, life = 4, color = Color(160, 120, 80),
+        speed = C.Speed, life = 4, color = Color(160, 120, 80), model = FX.ElemRockModel,
         onHit = function(tr)
             local e = tr.Entity
             if IsValid(e) and (e:IsPlayer() or e:IsNPC()) then

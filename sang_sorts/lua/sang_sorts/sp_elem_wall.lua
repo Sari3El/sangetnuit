@@ -9,6 +9,7 @@ if not HpwRewrite then return end
 SANGSPELL = SANGSPELL or {}
 local C = (SANGSPELL.Config and SANGSPELL.Config.ElemWall) or { Mana = 40, Cooldown = 14, Length = 320, Segments = 5, Radius = 75, Dps = 6, Duration = 6 }
 local COL = (SANGSPELL.Config and SANGSPELL.Config.ColElem) or Color(255, 140, 30)
+local FX = (SANGSPELL.Config and SANGSPELL.Config.Fx) or {}
 
 local Spell = { }
 Spell.NodeOffset = Vector(600, 900, 0)
@@ -38,7 +39,7 @@ function Spell:OnFire(wand)
         if IsValid(z) then
             z:SetPos(pos)
             z:Spawn() z:Activate()
-            z:SetupZone(ply, "fire", C.Radius, C.Dps, C.Duration, COL)
+            z:SetupZone(ply, "fire", C.Radius, C.Dps, C.Duration, COL, FX.ElemWallZone)
         end
     end
     ply:EmitSound("ambient/fire/mtov_flame2.wav", 80, 100)
