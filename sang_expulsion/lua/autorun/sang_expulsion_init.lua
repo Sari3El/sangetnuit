@@ -27,9 +27,11 @@ EXP.Config = {
     Cooldown      = 3,          -- délai entre deux coups (porteur)
 
     -- Animations (mets des NOMS de séquence — voir sang_exp_listseq).
-    StrikeAnim    = "bee_attack_hand_backfiststrike", -- coup du FRAPPEUR
-    FlyAnim       = "exit",                            -- CIBLE qui s'envole
-    GetupAnim     = "mad_sukuna_as_cp_020_00_downendfu_01", -- CIBLE projetée + relevé
+    --   Ordre : 1) coup du frappeur  2) envol  3) apex/vol  4) relevé À LA POS.
+    StrikeAnim    = "bee_attack_hand_backfiststrike",       -- 1) coup du FRAPPEUR
+    FlyAnim       = "exit",                                 -- 2) CIBLE envoyée dans le ciel
+    ApexAnim      = "mad_sukuna_as_cp_020_00_downfd_01",    -- 3) CIBLE au max / en vol
+    GetupAnim     = "mad_sukuna_as_cp_020_00_downendfu_01", -- 4) CIBLE à la pos qui se relève
 
     -- Timing (secondes)
     StrikeDelay    = 0.20,      -- petit délai avant l'envol (voir le coup)
@@ -198,12 +200,13 @@ if SERVER then
             target:EmitSound(C.LaunchSound, 75, 90)
             travel(target, fromPos, skyPos, C.FlyDuration, function()
                 if not IsValid(target) or not target.SangExpelling then return end
-                -- Phase 2 : PROJECTION du ciel jusqu'à la destination (anim de relevé/chute).
-                EXP.SetAnim(target, C.GetupAnim)
+                -- Phase 3 : PROJECTION du ciel jusqu'à la destination (anim d'apex/vol).
+                EXP.SetAnim(target, C.ApexAnim)
                 travel(target, skyPos, C.DestPos, C.ProjectDuration, function()
                     if not IsValid(target) then return end
-                    -- Phase 3 : arrivée, orientation, relevé, puis fin.
+                    -- Phase 4 : ARRIVÉE à la pos -> relevé (uniquement ici), puis fin.
                     if target:IsPlayer() then target:SetEyeAngles(Angle(0, C.DestAng.y, 0)) end
+                    EXP.SetAnim(target, C.GetupAnim)
                     timer.Simple(C.GetupDuration, function()
                         if IsValid(target) then EXP.Finish(target) end
                     end)

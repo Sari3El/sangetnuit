@@ -37,7 +37,8 @@ function SWEP:PrimaryAttack()
     self:SetNextPrimaryFire(CurTime() + cd)
 
     self:SendWeaponAnim(ACT_VM_HITCENTER)
-    owner:SetAnimation(PLAYER_ATTACK1)
+    -- (pas de SetAnimation ici : l'anim de coup du frappeur est forcée par
+    --  EXP.Expel via StrikeAnim, pour ne pas entrer en conflit.)
 
     if not SERVER then return end
     if not EXP or not EXP.Expel then return end
