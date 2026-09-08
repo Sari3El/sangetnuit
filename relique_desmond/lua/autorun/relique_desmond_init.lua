@@ -16,7 +16,7 @@ DESMOND.Config = {
     CrownScale    = 0.15,                    -- petit
     AuraParticle  = "[8]_light_aura",        -- au sol, sous le joueur
     AuraScale     = 4.0,                     -- x3 à x4
-    AuraFollow    = true,                    -- true = suit le joueur, false = reste au sol
+    AuraFollow    = false,                   -- false = reste au sol (là où tu étais), true = te suit
 
     Cooldown      = 0.4,
 }
