@@ -44,9 +44,9 @@ function SWEP:PrimaryAttack()
     local nx = (st + 1) % 3            -- 0 -> 1 -> 2 -> 0
     o:SetNWInt("desmond_state", nx)
 
-    -- Anim forcée uniquement sur l'état « couronne ».
-    if nx == 1 and DESMOND and DESMOND.Config then
-        o:SetNWString("desmond_seq", DESMOND.Config.Anim or "")
+    -- Anim jouée UNE fois à l'activation de la couronne (puis pose normale).
+    if nx == 1 and DESMOND and DESMOND.PlayAnimOnce then
+        DESMOND.PlayAnimOnce(o, DESMOND.Config.Anim)
     else
         o:SetNWString("desmond_seq", "")
     end

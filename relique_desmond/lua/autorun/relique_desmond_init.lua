@@ -1,37 +1,33 @@
 --[[-------------------------------------------------------------------------
     Relique Desmond — cœur (SWEP « Couronne de Lumière »)
-      Gère l'animation forcée sur le porteur + les particules (couronne sur la
-      tête, puis aura au sol), pilotées par l'état réseau du joueur.
-      Visuel uniquement pour l'instant (effets de gameplay plus tard).
+      Gère l'animation (jouée UNE fois puis retour pose normale) + les
+      particules (couronne sur la tête, puis aura au sol), pilotées par l'état
+      réseau du joueur. Position ET échelle pilotées chaque frame.
+      Visuel uniquement pour l'instant.
 ---------------------------------------------------------------------------]]
 
 DESMOND = DESMOND or {}
 
 DESMOND.Config = {
-    -- Animation forcée sur l'utilisateur (état COURONNE). ACT id -1 => on
-    -- utilise le NOM de séquence.
-    Anim          = "susanoo_kingsroar",
+    Anim          = "susanoo_kingsroar",     -- jouée UNE fois au 1er clic
 
-    -- Particules (depuis particles/vampirepcf.pcf).
     ParticleFile  = "particles/vampirepcf.pcf",
     CrownParticle = "[8]_light_projectile",  -- sur la tête
-    CrownScale    = 0.25,                    -- BEAUCOUP plus petit
-    CrownAttach   = "eyes",                  -- attachement tête (sinon origine)
-    AuraParticle  = "[8]_light_aura",        -- au sol, autour du joueur
-    AuraScale     = 3.5,                     -- x3 à x4
+    CrownScale    = 0.15,                    -- petit
+    AuraParticle  = "[8]_light_aura",        -- au sol, sous le joueur
+    AuraScale     = 4.0,                     -- x3 à x4
+    AuraFollow    = true,                    -- true = suit le joueur, false = reste au sol
 
-    Cooldown      = 0.4,                      -- anti double-clic
+    Cooldown      = 0.4,
 }
 
--- Enregistre le .pcf.
 if DESMOND.Config.ParticleFile and file.Exists(DESMOND.Config.ParticleFile, "GAME") then
     game.AddParticles(DESMOND.Config.ParticleFile)
     if SERVER then resource.AddFile(DESMOND.Config.ParticleFile) end
 end
 
 ----------------------------------------------------------------------
--- Animation forcée (corps entier) via CalcMainActivity, avec résolveur
--- tolérant (ignore le suffixe « retarget », recherche par sous-chaîne).
+-- Résolveur de séquence tolérant (ignore « retarget », sous-chaîne).
 ----------------------------------------------------------------------
 local seqCache = {}
 local function ResolveSeq(ply, name)
@@ -49,17 +45,31 @@ local function ResolveSeq(ply, name)
     seqCache[key] = id
     return id
 end
+DESMOND.ResolveSeq = ResolveSeq
 
+-- Anim forcée seulement le temps d'UNE lecture (NWFloat = heure de fin).
 hook.Add("CalcMainActivity", "Desmond_Anim", function(ply)
     local seq = ply:GetNWString("desmond_seq", "")
-    if seq ~= "" then
-        local id = ResolveSeq(ply, seq)
-        if id and id >= 0 then return ACT_IDLE, id end
-    end
+    if seq == "" then return end
+    if ply:GetNWFloat("desmond_seq_end", 0) <= CurTime() then return end
+    local id = ResolveSeq(ply, seq)
+    if id and id >= 0 then return ACT_IDLE, id end
 end)
 
 if SERVER then
-    -- Nettoyage de l'état à la mort/au respawn.
+    -- Joue une anim UNE seule fois (durée = longueur de la séquence).
+    function DESMOND.PlayAnimOnce(ply, name)
+        if not IsValid(ply) or not name or name == "" then return end
+        local id = ResolveSeq(ply, name)
+        local dur = (id and id >= 0) and ply:SequenceDuration(id) or 2
+        if not dur or dur <= 0 then dur = 2 end
+        ply:SetNWString("desmond_seq", name)
+        ply:SetNWFloat("desmond_seq_end", CurTime() + dur)
+        timer.Create("DesmondAnim_" .. ply:EntIndex(), dur, 1, function()
+            if IsValid(ply) then ply:SetNWString("desmond_seq", "") end
+        end)
+    end
+
     hook.Add("PlayerSpawn", "Desmond_Clear", function(ply)
         ply:SetNWInt("desmond_state", 0)
         ply:SetNWString("desmond_seq", "")
@@ -68,37 +78,39 @@ end
 
 if CLIENT then
     local C = DESMOND.Config
-    local handles = {} -- [ply] = { state, crown, aura }
+    local fx = {} -- [ply] = { state, eff, kind, pos }
 
     local function stopEff(e)
         if e and e.IsValid and e:IsValid() then e:StopEmissionAndDestroyImmediately() end
     end
 
-    -- Crée une particule attachée au joueur, avec une échelle (control point 1).
-    local function make(ply, name, attach, scale)
+    -- Position « tête » (attachement eyes -> os tête -> yeux en secours).
+    local function headPos(ply)
+        local a = ply:LookupAttachment("eyes")
+        if a and a > 0 then
+            local at = ply:GetAttachment(a)
+            if at then return at.Pos end
+        end
+        local b = ply:LookupBone("ValveBiped.Bip01_Head1")
+        if b then local p = ply:GetBonePosition(b) if p then return p end end
+        return ply:EyePos()
+    end
+
+    local function make(name, pos)
         if not name or name == "" then return nil end
-        local patt, aid = PATTACH_ABSORIGIN_FOLLOW, 0
-        if attach and attach ~= "" then
-            local a = ply:LookupAttachment(attach)
-            if a and a > 0 then patt, aid = PATTACH_POINT_FOLLOW, a end
-        end
-        local eff = CreateParticleSystem(ply, name, patt, aid)
-        if eff then
-            -- Convention courante : control point 1 = échelle du système.
-            eff:SetControlPoint(1, Vector(scale, scale, scale))
-        end
-        return eff
+        return CreateParticleSystemNoEntity(name, pos)
     end
 
     local function sync(ply, h)
         local st = ply:GetNWInt("desmond_state", 0)
         if h.state == st then return end
-        stopEff(h.crown) h.crown = nil
-        stopEff(h.aura)  h.aura  = nil
+        stopEff(h.eff) h.eff = nil h.kind = nil
         if st == 1 then
-            h.crown = make(ply, C.CrownParticle, C.CrownAttach, C.CrownScale)
+            h.kind, h.pos = "crown", headPos(ply)
+            h.eff = make(C.CrownParticle, h.pos)
         elseif st == 2 then
-            h.aura = make(ply, C.AuraParticle, nil, C.AuraScale)
+            h.kind, h.pos = "aura", ply:GetPos()
+            h.eff = make(C.AuraParticle, h.pos)
         end
         h.state = st
     end
@@ -106,16 +118,29 @@ if CLIENT then
     hook.Add("Think", "Desmond_Particles", function()
         for _, ply in ipairs(player.GetAll()) do
             if IsValid(ply) then
-                local h = handles[ply]
-                if not h then h = { state = -1 } handles[ply] = h end
+                local h = fx[ply]
+                if not h then h = { state = -1 } fx[ply] = h end
                 sync(ply, h)
+
+                if h.eff and h.eff:IsValid() then
+                    -- Position pilotée chaque frame.
+                    local pos
+                    if h.kind == "crown" then
+                        pos = headPos(ply)
+                    elseif h.kind == "aura" then
+                        pos = C.AuraFollow and ply:GetPos() or h.pos
+                    end
+                    if pos then h.eff:SetControlPoint(0, pos) end
+                    -- Échelle ré-appliquée chaque frame (control points courants).
+                    local s = (h.kind == "crown") and C.CrownScale or C.AuraScale
+                    local v = Vector(s, s, s)
+                    h.eff:SetControlPoint(1, v)
+                    h.eff:SetControlPoint(2, v)
+                end
             end
         end
-        for ply, h in pairs(handles) do
-            if not IsValid(ply) then
-                stopEff(h.crown) stopEff(h.aura)
-                handles[ply] = nil
-            end
+        for ply, h in pairs(fx) do
+            if not IsValid(ply) then stopEff(h.eff) fx[ply] = nil end
         end
     end)
 end
