@@ -28,7 +28,7 @@ EXP.Config = {
 
     -- Animations (mets des NOMS de séquence — voir sang_exp_listseq).
     --   Ordre : 1) coup du frappeur  2) envol  3) apex/vol  4) relevé À LA POS.
-    StrikeAnim    = "bee_attack_hand_backfiststrike",       -- 1) coup du FRAPPEUR
+    StrikeAnim    = "bee_attack_hand_moonkick_large",       -- 1) coup du FRAPPEUR
     FlyAnim       = "exit",                                 -- 2) CIBLE envoyée dans le ciel
     ApexAnim      = "mad_sukuna_as_cp_020_00_downfd_01",    -- 3) CIBLE au max / en vol
     GetupAnim     = "mad_sukuna_as_cp_020_00_downendfu_01", -- 4) CIBLE à la pos qui se relève
@@ -44,8 +44,8 @@ EXP.Config = {
     FlyAway       = 500,        -- distance horizontale (expulsion initiale)
 
     -- Destination (fournie)
-    DestPos = Vector(-3226.402100, 1087.258667, -12735.968750),
-    DestAng = Angle(4.576567, -175.543274, 3.856075),
+    DestPos = Vector(-598.161377, 617.874878, -12168.093750),
+    DestAng = Angle(12.094995, 9.656085, 0.000000),
 
     StrikeSound = "physics/body/body_medium_impact_hard5.wav",
     LaunchSound = "ambient/energy/whiteflash.wav",
@@ -56,10 +56,31 @@ EXP.Config = {
 --   NWString "sang_exp_seq" (nom de séquence) prioritaire, sinon NWInt
 --   "sang_exp_act" (ACT id). Vide/-1 = animation normale.
 ----------------------------------------------------------------------
+-- Résout un nom de séquence en id, avec tolérance (suffixe « retarget » de
+-- l'aperçu ignoré, puis recherche par sous-chaîne). Mis en cache par modèle.
+local seqCache = {}
+local function ResolveSeq(ply, name)
+    local key = ply:GetModel() .. "|" .. name
+    local c = seqCache[key]
+    if c ~= nil then return c end
+
+    local id = ply:LookupSequence(name)
+    if id < 0 then id = ply:LookupSequence(string.Trim(string.Replace(name, "retarget", ""))) end
+    if id < 0 then
+        local ln = string.lower(name)
+        for i = 0, ply:GetSequenceCount() - 1 do
+            if string.find(string.lower(ply:GetSequenceName(i)), ln, 1, true) then id = i break end
+        end
+    end
+    seqCache[key] = id
+    return id
+end
+SANGEXP_ResolveSeq = ResolveSeq
+
 hook.Add("CalcMainActivity", "SangExp_Anim", function(ply, vel)
     local seq = ply:GetNWString("sang_exp_seq", "")
     if seq ~= "" then
-        local id = ply:LookupSequence(seq)
+        local id = ResolveSeq(ply, seq)
         if id and id >= 0 then return ACT_IDLE, id end
     end
     local act = ply:GetNWInt("sang_exp_act", -1)
