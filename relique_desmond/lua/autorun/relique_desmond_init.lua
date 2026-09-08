@@ -77,6 +77,27 @@ if SERVER then
 end
 
 if CLIENT then
+    -- Debug : liste les systèmes « [N]_nom » présents dans les .pcf (pour
+    -- trouver une variante déjà plus petite/grande d'un effet).
+    --   Console : desmond_listparticles light      (filtre sur "light")
+    concommand.Add("desmond_listparticles", function(_, _, args)
+        local filt = string.lower(args[1] or "")
+        local seen, n = {}, 0
+        for _, v in ipairs(file.Find("particles/*.pcf", "GAME") or {}) do
+            local data = file.Read("particles/" .. v, "GAME")
+            if data then
+                for nm in string.gmatch(data, "%[%d+%]_[%w_]+") do
+                    if not seen[nm] and (filt == "" or string.find(string.lower(nm), filt, 1, true)) then
+                        seen[nm] = true
+                        MsgN(("  %-40s  <- %s"):format(nm, v))
+                        n = n + 1
+                    end
+                end
+            end
+        end
+        MsgN("Total : " .. n .. (filt ~= "" and (" (filtre: " .. filt .. ")") or ""))
+    end)
+
     local C = DESMOND.Config
     local fx = {} -- [ply] = { state, eff, kind, pos }
 
