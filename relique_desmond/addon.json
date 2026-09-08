@@ -1,0 +1,11 @@
+{
+    "title": "Relique Desmond — Couronne de Lumière (SWEP)",
+    "type": "weapon",
+    "tags": ["roleplay", "fun"],
+    "ignore": [
+        "*.md",
+        "*.txt",
+        ".git/*",
+        ".gitignore"
+    ]
+}
