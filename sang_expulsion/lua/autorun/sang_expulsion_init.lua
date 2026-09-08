@@ -1,12 +1,20 @@
 --[[-------------------------------------------------------------------------
-    Sang et Nuit — Expulsion (SWEP de coup + envol + téléportation)
+    Sang et Nuit — Expulsion (SWEP de coup + envol + PROJECTION)
       Le porteur frappe une cible (clic gauche). La cible :
         1) est étourdie ET invincible du début à la fin ;
-        2) s'envole dans le ciel pendant quelques secondes (anim d'envol) ;
-        3) est envoyée à une position fixe (SetPos/SetAngles) ;
-        4) s'y relève (anim de relevé), puis reprend le contrôle.
-      Les animations sont configurables : un NOMBRE = ACT id, une CHAÎNE = nom
-      de séquence (LookupSequence). Réglable dans EXP.Config ci-dessous.
+        2) s'envole dans le ciel (anim d'envol) ;
+        3) est PROJETÉE (pas téléportée) jusqu'à la position fixe, en volant
+           (anim de relevé/chute pendant le trajet) ;
+        4) arrive à la position, s'y relève, puis reprend le contrôle.
+
+      Animations forcées via CalcMainActivity. Chaque anim est un « spec » :
+        - une CHAÎNE  = nom de séquence (LookupSequence) — RECOMMANDÉ (fiable) ;
+        - un NOMBRE   = ACT id (SelectWeightedSequence) — peut varier selon le
+                        modèle, donc moins fiable.
+      Pour trouver les bons noms sur TON modèle, en jeu (console) :
+        sang_exp_listseq            -> liste toutes les séquences du modèle
+        sang_exp_listseq down       -> filtre celles contenant "down"
+        sang_exp_testanim <nom>     -> joue l'anim sur toi 4 s (pour tester)
 ---------------------------------------------------------------------------]]
 
 EXP = EXP or {}
@@ -18,20 +26,20 @@ EXP.Config = {
     Range         = 300,        -- portée du coup (unités)
     Cooldown      = 3,          -- délai entre deux coups (porteur)
 
-    -- Animations. Nombre => ACT id ; chaîne => nom de séquence.
-    --   (valeurs de départ = ACT id de tes screenshots — ajuste si besoin)
-    StrikeAnim    = 2264,       -- coup du FRAPPEUR (ALD_ANIMATION_175 / backfiststrike)
-    FlyAnim       = 2183,       -- la CIBLE qui s'envole (ALD_ANIMATION_93 / "exit")
-    GetupAnim     = 2061,       -- la CIBLE qui se relève à l'arrivée (ACT_MAD_1 / downendfu)
+    -- Animations (mets des NOMS de séquence — voir sang_exp_listseq).
+    StrikeAnim    = "bee_attack_hand_backfiststrike", -- coup du FRAPPEUR
+    FlyAnim       = "exit",                            -- CIBLE qui s'envole
+    GetupAnim     = "mad_sukuna_as_cp_020_00_downendfu_01", -- CIBLE projetée + relevé
 
     -- Timing (secondes)
-    StrikeDelay   = 0.20,       -- petit délai pour voir le coup avant l'envol
-    FlyDuration   = 3.0,        -- durée de l'envol vers le ciel
-    GetupDuration = 2.5,        -- durée du relevé à l'arrivée
+    StrikeDelay    = 0.20,      -- petit délai avant l'envol (voir le coup)
+    FlyDuration    = 2.0,       -- montée vers le ciel
+    ProjectDuration = 2.5,      -- vol du ciel jusqu'à la destination (projection)
+    GetupDuration  = 2.0,       -- relevé une fois arrivé
 
     -- Envol
     SkyHeight     = 2200,       -- hauteur d'envol
-    FlyAway       = 500,        -- distance horizontale (expulsion)
+    FlyAway       = 500,        -- distance horizontale (expulsion initiale)
 
     -- Destination (fournie)
     DestPos = Vector(-3226.402100, 1087.258667, -12735.968750),
@@ -59,6 +67,26 @@ hook.Add("CalcMainActivity", "SangExp_Anim", function(ply, vel)
     end
 end)
 
+----------------------------------------------------------------------
+-- Debug client : lister les séquences du modèle / tester une anim.
+----------------------------------------------------------------------
+if CLIENT then
+    concommand.Add("sang_exp_listseq", function(ply, _, args)
+        if not IsValid(ply) then return end
+        local filt = string.lower(args[1] or "")
+        MsgN("=== Séquences de " .. ply:GetModel() .. " ===")
+        local n = 0
+        for i = 0, ply:GetSequenceCount() - 1 do
+            local name = ply:GetSequenceName(i)
+            if filt == "" or string.find(string.lower(name), filt, 1, true) then
+                MsgN(("  [%d] %s"):format(i, name))
+                n = n + 1
+            end
+        end
+        MsgN("Total : " .. n .. (filt ~= "" and (" (filtre: " .. filt .. ")") or ""))
+    end)
+end
+
 if SERVER then
     util.PrecacheSound(EXP.Config.StrikeSound)
 
@@ -77,6 +105,16 @@ if SERVER then
         end
     end
 
+    -- Test : force une anim sur soi 4 s (console : sang_exp_testanim <nom|actid>)
+    concommand.Add("sang_exp_testanim", function(ply, _, args)
+        if not IsValid(ply) then return end
+        local a = args[1]
+        if not a then ply:ChatPrint("[Expulsion] Usage: sang_exp_testanim <nom_de_sequence|act_id>") return end
+        EXP.SetAnim(ply, tonumber(a) or a)
+        timer.Simple(4, function() if IsValid(ply) then EXP.SetAnim(ply, nil) end end)
+        ply:ChatPrint("[Expulsion] Test anim: " .. a .. " (4 s)")
+    end)
+
     -- Étourdissement : plus aucune action tant qu'on est expulsé.
     hook.Add("StartCommand", "SangExp_Stun", function(ply, cmd)
         if ply.SangExpelling then cmd:ClearButtons() cmd:ClearMovement() end
@@ -87,37 +125,41 @@ if SERVER then
         if IsValid(target) and target.SangExpelling then return true end
     end)
 
-    -- Nettoyage si la cible meurt/déco/spawn en cours de route.
+    -- Nettoyage si la cible respawn en cours de route.
     hook.Add("PlayerSpawn", "SangExp_Clear", function(ply)
-        if ply.SangExpelling then EXP.Finish(ply, true) end
+        if ply.SangExpelling then EXP.Finish(ply) end
     end)
+
+    local function fid(t) return "SangExpMove_" .. t:EntIndex() end
 
     ------------------------------------------------------------------
     -- Fin : rend le contrôle et enlève l'invincibilité.
     ------------------------------------------------------------------
-    function EXP.Finish(target, silent)
+    function EXP.Finish(target)
         if not IsValid(target) then return end
         target.SangExpelling = nil
-        timer.Remove("SangExpFly_" .. target:EntIndex())
+        timer.Remove(fid(target))
         EXP.SetAnim(target, nil)
         target:SetMoveType(target.SangExpOldMove or MOVETYPE_WALK)
         if target:IsPlayer() then target:GodDisable() end
         target.SangExpOldMove = nil
     end
 
-    ------------------------------------------------------------------
-    -- Arrivée : téléportation à la destination + anim de relevé.
-    ------------------------------------------------------------------
-    function EXP.Arrive(target)
-        if not IsValid(target) then return end
-        local C = EXP.Config
-        timer.Remove("SangExpFly_" .. target:EntIndex())
-        target:SetPos(C.DestPos)
-        target:SetVelocity(vector_origin)
-        if target:IsPlayer() then target:SetEyeAngles(Angle(0, C.DestAng.y, 0)) end
-        EXP.SetAnim(target, C.GetupAnim)
-        timer.Simple(C.GetupDuration, function()
-            if IsValid(target) then EXP.Finish(target) end
+    -- Déplace la cible de `a` vers `b` en `dur` s, puis appelle onDone().
+    local function travel(target, a, b, dur, onDone)
+        local start = CurTime()
+        timer.Create(fid(target), 0, 0, function()
+            if not IsValid(target) or not target.SangExpelling then timer.Remove(fid(target)) return end
+            local t = (CurTime() - start) / dur
+            if t >= 1 then
+                timer.Remove(fid(target))
+                target:SetPos(b)
+                target:SetVelocity(vector_origin)
+                if onDone then onDone() end
+                return
+            end
+            target:SetPos(LerpVector(t, a, b))
+            target:SetVelocity(vector_origin)
         end)
     end
 
@@ -137,7 +179,7 @@ if SERVER then
         -- Anim + son du frappeur
         if IsValid(attacker) then
             EXP.SetAnim(attacker, C.StrikeAnim)
-            timer.Simple(0.7, function() if IsValid(attacker) then EXP.SetAnim(attacker, nil) end end)
+            timer.Simple(0.8, function() if IsValid(attacker) then EXP.SetAnim(attacker, nil) end end)
             attacker:EmitSound(C.StrikeSound, 80, 100)
         end
 
@@ -149,19 +191,23 @@ if SERVER then
         local fromPos = target:GetPos()
         local skyPos  = fromPos + away * C.FlyAway + Vector(0, 0, C.SkyHeight)
 
-        -- Après un court délai : anim d'envol + montée progressive.
         timer.Simple(C.StrikeDelay, function()
             if not IsValid(target) or not target.SangExpelling then return end
+            -- Phase 1 : envol vers le ciel.
             EXP.SetAnim(target, C.FlyAnim)
             target:EmitSound(C.LaunchSound, 75, 90)
-            local start = CurTime()
-            local id = "SangExpFly_" .. target:EntIndex()
-            timer.Create(id, 0, 0, function()
-                if not IsValid(target) or not target.SangExpelling then timer.Remove(id) return end
-                local t = (CurTime() - start) / C.FlyDuration
-                if t >= 1 then EXP.Arrive(target) return end
-                target:SetPos(LerpVector(t, fromPos, skyPos))
-                target:SetVelocity(vector_origin)
+            travel(target, fromPos, skyPos, C.FlyDuration, function()
+                if not IsValid(target) or not target.SangExpelling then return end
+                -- Phase 2 : PROJECTION du ciel jusqu'à la destination (anim de relevé/chute).
+                EXP.SetAnim(target, C.GetupAnim)
+                travel(target, skyPos, C.DestPos, C.ProjectDuration, function()
+                    if not IsValid(target) then return end
+                    -- Phase 3 : arrivée, orientation, relevé, puis fin.
+                    if target:IsPlayer() then target:SetEyeAngles(Angle(0, C.DestAng.y, 0)) end
+                    timer.Simple(C.GetupDuration, function()
+                        if IsValid(target) then EXP.Finish(target) end
+                    end)
+                end)
             end)
         end)
 
