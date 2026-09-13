@@ -289,13 +289,27 @@ local function openChat(teamMode)
     curTeam = teamMode and true or false
     local g = geom()
 
-    frame = vgui.Create("DPanel")
+    -- DFrame (et non DPanel) : la gestion du focus clavier vers la saisie est
+    -- fiable, comme Derma_StringRequest (un DPanel MakePopup ne transmet pas
+    -- toujours le clavier à la zone de texte enfant -> impossible d'écrire).
+    frame = vgui.Create("DFrame")
     frame:SetPos(g.m - g.pad, g.logTop - g.pad)
     local frameW = g.cw + g.pad * 2
     frame:SetSize(frameW, (g.inputY + g.inh) - (g.logTop - g.pad) + S(4))
+    frame:SetTitle("")
+    frame:ShowCloseButton(false)
+    frame:SetDraggable(false)
+    frame:SetSizable(false)
+    frame:DockPadding(0, 0, 0, 0)
     frame.Paint = function() end
     frame:MakePopup()
+    frame:SetKeyboardInputEnabled(true)
+    frame:SetMouseInputEnabled(true)
     frame.OnMouseWheeled = function(_, d) scroll = scroll + d return true end
+    -- Échap au niveau de la fenêtre (chemin le plus direct).
+    frame.OnKeyCodePressed = function(_, key)
+        if key == KEY_ESCAPE then closeChat() return true end
+    end
 
     -- Bouton de fermeture (croix) — toujours cliquable (curseur visible).
     local close = vgui.Create("DButton", frame)
@@ -312,16 +326,17 @@ local function openChat(teamMode)
     close.DoClick = function() closeChat() end
 
     entry = vgui.Create("DTextEntry", frame)
-    entry:SetPos(g.m - (g.m - g.pad) + g.pref, (g.inputY) - (g.logTop - g.pad))
+    entry:SetPos(g.pad + g.pref, g.inputY - (g.logTop - g.pad))
     entry:SetSize(g.cw - g.pref - S(6), g.inh)
     entry:SetFont(FONT)
     entry:SetPaintBackground(false)
+    entry:SetKeyboardInputEnabled(true)
     entry:SetUpdateOnType(true)
+    entry:SetAllowNonAsciiCharacters(true)
     entry.Paint = function(self, w, h)
         local C = COL()
         self:DrawTextEntryText(C.txt, Color(C.gold.r, C.gold.g, C.gold.b, 120), C.goldLt)
     end
-    entry:RequestFocus()
 
     -- SetText (navigation historique/complétion) ne déclenche pas OnValueChange :
     -- histIdx n'est donc réinitialisé QUE quand le joueur tape lui-même.
@@ -336,6 +351,11 @@ local function openChat(teamMode)
     end
 
     isOpen = true
+    -- Focus donné à la frame suivante : RequestFocus dans la même frame que la
+    -- création ne « prend » pas toujours (le système de focus se met à jour au
+    -- tick suivant).
+    entry:RequestFocus()
+    timer.Simple(0, function() if IsValid(entry) then entry:RequestFocus() end end)
     hook.Run("StartChat", curTeam)
 end
 
