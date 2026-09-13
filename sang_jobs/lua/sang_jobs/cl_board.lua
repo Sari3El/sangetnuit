@@ -8,6 +8,8 @@
 
 SJOB = SJOB or {}
 local board
+local staffDialog        -- boîte de dialogue staff en cours (valeur num / texte)
+local clickerOn = false  -- état réel du curseur (piloté par Think, auto-réparant)
 
 local function jobOf(pl)
     return SJOB.JobsById[pl:GetNWString("sang_job", SJOB.Config.DefaultJob)] or SJOB.GetJob(SJOB.Config.DefaultJob)
@@ -45,12 +47,15 @@ local function sendStaff(pl, a, num, text)
 end
 
 local function doStaff(pl, act)
+    -- Une seule boîte à la fois ; on la garde tracée pour pouvoir la fermer
+    -- (elle grabbe le curseur/clavier : jamais elle ne doit survivre au board).
+    if IsValid(staffDialog) then staffDialog:Remove() staffDialog = nil end
     if act.num then
-        Derma_StringRequest("Staff — " .. act.l, act.t or "Valeur :", "", function(txt)
+        staffDialog = Derma_StringRequest("Staff — " .. act.l, act.t or "Valeur :", "", function(txt)
             sendStaff(pl, act.a, tonumber(txt) or 0, "")
         end)
     elseif act.str then
-        Derma_StringRequest("Staff — " .. act.l, act.t or "Texte :", "", function(txt)
+        staffDialog = Derma_StringRequest("Staff — " .. act.l, act.t or "Texte :", "", function(txt)
             sendStaff(pl, act.a, 0, txt or "")
         end)
     else
@@ -252,16 +257,45 @@ local function buildBoard()
     return p
 end
 
+----------------------------------------------------------------------
+-- Curseur piloté UNIQUEMENT par l'existence du panneau (auto-réparant).
+--   Dès que le scoreboard n'existe plus, le curseur est relâché à la frame
+--   suivante — impossible de le laisser « bloqué » même si ScoreboardHide
+--   est manqué ou si ScoreboardShow se déclenche deux fois.
+----------------------------------------------------------------------
+hook.Add("Think", "SJOB_BoardCursor", function()
+    local want = IsValid(board)
+    if want ~= clickerOn then
+        clickerOn = want
+        gui.EnableScreenClicker(want)
+    end
+end)
+
 hook.Add("ScoreboardShow", "SJOB_Board", function()
     if not (BLOOD and BLOOD.UI) then return end
     if IsValid(board) then board:Remove() end
     board = buildBoard()
-    gui.EnableScreenClicker(true)
     return true
 end)
 
 hook.Add("ScoreboardHide", "SJOB_Board", function()
-    gui.EnableScreenClicker(false)
+    -- La boîte staff grabbe le curseur/clavier : ne jamais la laisser derrière.
+    if IsValid(staffDialog) then staffDialog:Remove() staffDialog = nil end
     if IsValid(board) then board:Remove() board = nil end
     return true
+end)
+
+----------------------------------------------------------------------
+-- Filet de sécurité : si jamais le curseur reste bloqué, taper en console :
+--   sang_fixcursor
+----------------------------------------------------------------------
+concommand.Add("sang_fixcursor", function()
+    if IsValid(staffDialog) then staffDialog:Remove() staffDialog = nil end
+    if IsValid(board) then board:Remove() board = nil end
+    CloseDermaMenus()
+    for _ = 1, 12 do gui.EnableScreenClicker(false) end -- vide la pile éventuelle
+    clickerOn = false
+    if chat and chat.AddText then
+        chat.AddText(Color(210, 176, 108), "[Sang et Nuit] Curseur réinitialisé.")
+    end
 end)
