@@ -33,6 +33,7 @@ local MODULES = {
     { "sang/server/sv_players.lua", "sv" },
     { "sang/server/sv_reroll.lua",  "sv" },
     { "sang/server/sv_admin.lua",   "sv" },
+    { "sang/server/sv_staff.lua",   "sv" }, -- actions staff du scoreboard
 
     { "sang/client/cl_net.lua",   "cl" },
     { "sang/client/cl_theme.lua", "cl" },
