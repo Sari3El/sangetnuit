@@ -34,8 +34,9 @@ end
 -- Polices dédiées (indépendantes du thème)
 ----------------------------------------------------------------------
 local FONT = "SangChat_Text"
-surface.CreateFont(FONT,          { font = "Georgia", size = S(18), weight = 600, antialias = true, extended = true })
+surface.CreateFont(FONT,           { font = "Georgia", size = S(18), weight = 600, antialias = true, extended = true })
 surface.CreateFont("SangChat_Pre", { font = "Georgia", size = S(18), weight = 800, antialias = true, extended = true })
+surface.CreateFont("SangChat_Hint",{ font = "Georgia", size = S(12), weight = 600, antialias = true, extended = true, italic = true })
 
 ----------------------------------------------------------------------
 -- État
@@ -56,16 +57,18 @@ local frame, entry
 ----------------------------------------------------------------------
 local function geom()
     local g = {}
-    g.m    = S(28)
-    g.cw   = math.min(S(580), ScrW() - S(56))
-    g.inh  = S(30)
+    g.m    = S(24)
+    g.cw   = math.min(S(500), ScrW() - S(56))
+    g.inh  = S(28)
     g.pad  = S(8)
-    g.bottom     = ScrH() - S(150)          -- bas de la barre de saisie
+    -- La carte HUD perso occupe le coin bas-gauche (~ ScrH()-188 -> ScrH()-24).
+    -- On place donc le tchat JUSTE AU-DESSUS pour ne rien recouvrir.
+    g.bottom     = ScrH() - S(202)          -- bas de la barre de saisie
     g.inputY     = g.bottom - g.inh
     g.logBottom  = g.inputY - S(8)
-    g.logTop     = g.logBottom - S(340)
+    g.logTop     = g.logBottom - S(196)     -- journal beaucoup plus court
     g.maxw       = g.cw - S(16)
-    g.pref       = S(78)
+    g.pref       = S(72)
     return g
 end
 
@@ -185,6 +188,9 @@ local function drawLog()
             g.m + S(8), g.inputY + g.inh / 2, C.goldLt, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
         surface.SetDrawColor(C.goldDk)
         surface.DrawRect(g.m + g.pref - S(6), g.inputY + S(5), 1, g.inh - S(10))
+        -- rappel des touches, en haut du panneau (à gauche de la croix)
+        draw.SimpleText("Entrée : envoyer   ·   Échap : fermer", "SangChat_Hint",
+            g.m + g.cw - S(30), g.logTop - S(2), C.goldDk, TEXT_ALIGN_RIGHT, TEXT_ALIGN_BOTTOM)
     end
 
     local total = #disp
@@ -213,12 +219,6 @@ local function drawLog()
         y = y - lineH
     end
     render.SetScissorRect(0, 0, 0, 0, false)
-
-    -- indicateur « défile vers le haut »
-    if isOpen and scroll < maxScroll then
-        draw.SimpleText("▲ plus haut", "SangChat_Pre", g.m + g.cw - S(8), g.logTop - S(2),
-            C.goldDk, TEXT_ALIGN_RIGHT, TEXT_ALIGN_TOP)
-    end
     return lineH
 end
 
@@ -291,10 +291,25 @@ local function openChat(teamMode)
 
     frame = vgui.Create("DPanel")
     frame:SetPos(g.m - g.pad, g.logTop - g.pad)
-    frame:SetSize(g.cw + g.pad * 2, (g.inputY + g.inh) - (g.logTop - g.pad) + S(4))
+    local frameW = g.cw + g.pad * 2
+    frame:SetSize(frameW, (g.inputY + g.inh) - (g.logTop - g.pad) + S(4))
     frame.Paint = function() end
     frame:MakePopup()
     frame.OnMouseWheeled = function(_, d) scroll = scroll + d return true end
+
+    -- Bouton de fermeture (croix) — toujours cliquable (curseur visible).
+    local close = vgui.Create("DButton", frame)
+    close:SetText("")
+    close:SetSize(S(20), S(20))
+    close:SetPos(frameW - S(24), S(4))
+    close.Paint = function(self, w, h)
+        local C = COL()
+        surface.SetDrawColor(self:IsHovered() and C.blood or C.goldDk)
+        surface.DrawOutlinedRect(0, 0, w, h, 1)
+        draw.SimpleText("✕", "SangChat_Pre", w / 2, h / 2,
+            self:IsHovered() and C.goldLt or C.gold, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    end
+    close.DoClick = function() closeChat() end
 
     entry = vgui.Create("DTextEntry", frame)
     entry:SetPos(g.m - (g.m - g.pad) + g.pref, (g.inputY) - (g.logTop - g.pad))
@@ -311,6 +326,7 @@ local function openChat(teamMode)
     -- SetText (navigation historique/complétion) ne déclenche pas OnValueChange :
     -- histIdx n'est donc réinitialisé QUE quand le joueur tape lui-même.
     entry.OnValueChange = function() histIdx = nil hook.Run("ChatTextChanged", entry:GetValue()) end
+    entry.OnEnter = function() sendChat() end          -- Entrée = envoyer + fermer
     entry.OnKeyCodeTyped = function(self, key)
         if key == KEY_ESCAPE then closeChat() return true end
         if key == KEY_ENTER or key == KEY_PAD_ENTER then sendChat() return true end
@@ -322,6 +338,16 @@ local function openChat(teamMode)
     isOpen = true
     hook.Run("StartChat", curTeam)
 end
+
+-- Échap : sur un panneau MakePopup, la touche Échap est captée par le moteur
+-- (menu de pause) et n'atteint pas la saisie. On la rattrape ici : si le menu
+-- s'ouvre alors que le tchat est ouvert, on referme les deux d'un coup.
+hook.Add("Think", "SangChat_Escape", function()
+    if isOpen and gui.IsGameUIVisible() then
+        gui.HideGameUI()
+        closeChat()
+    end
+end)
 
 ----------------------------------------------------------------------
 -- Surcharge de l'API chat (pour que les autres addons restent visibles)
