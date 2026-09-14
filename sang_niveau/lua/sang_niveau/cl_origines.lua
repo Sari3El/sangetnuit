@@ -18,10 +18,25 @@ net.Receive("slvl_xpmult", function()
     if IsValid(SLVL._xpmultField) then SLVL._xpmultField:SetText(tostring(v)) end
 end)
 
-local addPlayer = BLOOD.Origines.AddPlayerSection
-    or function(fn) table.insert(BLOOD.Origines.playerSections, fn) end
-local addServer = BLOOD.Origines.AddServerSection
-    or function(fn) table.insert(BLOOD.Origines.serverSections, fn) end
+-- Inscription idempotente par id (anti-doublon, quel que soit l'ordre/chargements).
+local function addPlayer(fn, id)
+    if BLOOD.Origines.AddPlayerSection then return BLOOD.Origines.AddPlayerSection(fn, id) end
+    BLOOD.Origines.playerSections = BLOOD.Origines.playerSections or {}
+    BLOOD.Origines._playerIds = BLOOD.Origines._playerIds or {}
+    local ids = BLOOD.Origines._playerIds
+    if id and ids[id] then BLOOD.Origines.playerSections[ids[id]] = fn return end
+    table.insert(BLOOD.Origines.playerSections, fn)
+    if id then ids[id] = #BLOOD.Origines.playerSections end
+end
+local function addServer(fn, id)
+    if BLOOD.Origines.AddServerSection then return BLOOD.Origines.AddServerSection(fn, id) end
+    BLOOD.Origines.serverSections = BLOOD.Origines.serverSections or {}
+    BLOOD.Origines._serverIds = BLOOD.Origines._serverIds or {}
+    local ids = BLOOD.Origines._serverIds
+    if id and ids[id] then BLOOD.Origines.serverSections[ids[id]] = fn return end
+    table.insert(BLOOD.Origines.serverSections, fn)
+    if id then ids[id] = #BLOOD.Origines.serverSections end
+end
 
 ----------------------------------------------------------------------
 -- Gestion Joueurs : Niveau & compétences

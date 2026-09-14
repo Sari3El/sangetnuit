@@ -9,8 +9,17 @@ if not CLIENT then return end
 SANGTICKET = SANGTICKET or {}
 BLOOD = BLOOD or {}
 BLOOD.Origines = BLOOD.Origines or { playerSections = {}, serverSections = {} }
-local addServer = BLOOD.Origines.AddServerSection
-    or function(fn) table.insert(BLOOD.Origines.serverSections, fn) end
+-- Inscription idempotente par id (dédoublonne même si le cœur n'est pas encore
+-- chargé au moment de l'appel, ou si un fichier est chargé deux fois).
+local function addServer(fn, id)
+    if BLOOD.Origines.AddServerSection then return BLOOD.Origines.AddServerSection(fn, id) end
+    BLOOD.Origines.serverSections = BLOOD.Origines.serverSections or {}
+    BLOOD.Origines._serverIds = BLOOD.Origines._serverIds or {}
+    local ids = BLOOD.Origines._serverIds
+    if id and ids[id] then BLOOD.Origines.serverSections[ids[id]] = fn return end
+    table.insert(BLOOD.Origines.serverSections, fn)
+    if id then ids[id] = #BLOOD.Origines.serverSections end
+end
 
 local statsData, logsData = {}, {}
 

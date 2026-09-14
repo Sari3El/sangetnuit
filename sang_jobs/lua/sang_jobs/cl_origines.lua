@@ -129,5 +129,13 @@ local function buildConfigPerso(f)
 end
 
 -- Enregistrement idempotent (évite un doublon au rechargement du fichier).
-local addPage = BLOOD.Origines.AddPage or function(t) table.insert(BLOOD.Origines.pages, t) end
+-- Ajout de page idempotent par id (anti-doublon).
+local function addPage(t)
+    if BLOOD.Origines.AddPage then return BLOOD.Origines.AddPage(t) end
+    BLOOD.Origines.pages = BLOOD.Origines.pages or {}
+    for i, p in ipairs(BLOOD.Origines.pages) do
+        if p.id == t.id then BLOOD.Origines.pages[i] = t return end
+    end
+    table.insert(BLOOD.Origines.pages, t)
+end
 addPage({ id = "configperso", label = "Config Perso", order = 3, kind = "gold", build = buildConfigPerso })
