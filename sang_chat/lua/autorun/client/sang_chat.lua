@@ -36,7 +36,6 @@ end
 local FONT = "SangChat_Text"
 surface.CreateFont(FONT,           { font = "Georgia", size = S(18), weight = 600, antialias = true, extended = true })
 surface.CreateFont("SangChat_Pre", { font = "Georgia", size = S(18), weight = 800, antialias = true, extended = true })
-surface.CreateFont("SangChat_Hint",{ font = "Georgia", size = S(12), weight = 600, antialias = true, extended = true, italic = true })
 
 ----------------------------------------------------------------------
 -- État
@@ -188,12 +187,6 @@ local function drawLog()
             g.m + S(8), g.inputY + g.inh / 2, C.goldLt, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
         surface.SetDrawColor(C.goldDk)
         surface.DrawRect(g.m + g.pref - S(6), g.inputY + S(5), 1, g.inh - S(10))
-        -- rappel des touches — placé À L'INTÉRIEUR du panneau, avec ombre, pour
-        -- rester lisible sur n'importe quel fond de map.
-        local hint = "Entrée : envoyer   ·   Échap : fermer"
-        local hx, hy = g.m + g.cw - S(28), g.logTop - g.pad + S(2)
-        draw.SimpleText(hint, "SangChat_Hint", hx + 1, hy + 1, Color(0, 0, 0, 230), TEXT_ALIGN_RIGHT, TEXT_ALIGN_TOP)
-        draw.SimpleText(hint, "SangChat_Hint", hx,     hy,     C.goldLt,             TEXT_ALIGN_RIGHT, TEXT_ALIGN_TOP)
     end
 
     local total = #disp
