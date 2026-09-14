@@ -357,7 +357,4 @@ concommand.Add("sang_fixcursor", function()
     CloseDermaMenus()
     for _ = 1, 12 do gui.EnableScreenClicker(false) end -- vide la pile éventuelle
     clickerOn = false
-    if chat and chat.AddText then
-        chat.AddText(Color(210, 176, 108), "[Sang et Nuit] Curseur réinitialisé.")
-    end
 end)

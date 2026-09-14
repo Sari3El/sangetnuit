@@ -97,7 +97,7 @@ concommand.Add("sang_givecovan", function(ply, _, args)
         sid = BLOOD.NormalizeSteamID(targetArg or "")
     end
     if not sid then
-        if IsValid(ply) then ply:ChatPrint("[Sang et Nuit] SteamID invalide.") else print("SteamID invalide.") end
+        if IsValid(ply) then ply:PrintMessage(HUD_PRINTCONSOLE, "[Sang et Nuit] SteamID invalide.") else print("SteamID invalide.") end
         return
     end
 
@@ -110,5 +110,5 @@ concommand.Add("sang_givecovan", function(ply, _, args)
     end
 
     local msg = "[Sang et Nuit] " .. amount .. " " .. BLOOD.Config.Currency .. " => " .. sid .. " (solde: " .. bal .. ")"
-    if IsValid(ply) then ply:ChatPrint(msg) else print(msg) end
+    if IsValid(ply) then ply:PrintMessage(HUD_PRINTCONSOLE, msg) else print(msg) end
 end)

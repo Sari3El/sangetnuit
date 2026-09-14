@@ -44,23 +44,64 @@ net.Receive("blood_sync", function()
 end)
 
 ----------------------------------------------------------------------
--- Notifications (chat coloré)
+-- Notifications : HUD à l'écran (PLUS dans le tchat) — file d'attente
 ----------------------------------------------------------------------
+surface.CreateFont("SangToast", { font = "Georgia", size = 19, weight = 700, antialias = true, extended = true })
+
+local toasts = {}
+local TOAST_LIFE = 4.5
+
+local function toastColor(kind)
+    if kind == "error"  then return Color(214, 74, 74)   end
+    if kind == "reroll" then return Color(110, 170, 255)  end
+    return Color(210, 176, 108) -- info / défaut : or
+end
+
 net.Receive("blood_notify", function()
     local msg  = net.ReadString()
     local kind = net.ReadString()
+    toasts[#toasts + 1] = { text = msg, col = toastColor(kind), born = CurTime() }
+    while #toasts > 6 do table.remove(toasts, 1) end
+    surface.PlaySound("buttons/button15.wav")
+end)
 
-    local col = color_white
-    if kind == "error" then
-        col = Color(255, 80, 80)
-    elseif kind == "reroll" then
-        col = Color(120, 200, 255)
-    elseif kind == "info" then
-        col = Color(120, 255, 120)
+hook.Add("HUDPaint", "BLOOD_Toasts", function()
+    local n = #toasts
+    if n == 0 then return end
+    local now = CurTime()
+    for i = n, 1, -1 do
+        if now - toasts[i].born > TOAST_LIFE then table.remove(toasts, i) end
     end
 
-    chat.AddText(Color(200, 60, 60), "[Sang et Nuit] ", col, msg)
-    surface.PlaySound("buttons/button15.wav")
+    local S = (BLOOD.UI and BLOOD.UI.Scale) or function(v) return math.floor(v * (ScrH() / 1080) + 0.5) end
+    surface.SetFont("SangToast")
+    local y = S(96)
+    for _, t in ipairs(toasts) do
+        local age = now - t.born
+        local a = 255
+        if age < 0.15 then a = 255 * (age / 0.15)
+        elseif age > TOAST_LIFE - 0.6 then a = 255 * math.max(0, (TOAST_LIFE - age) / 0.6) end
+
+        local tw, th = surface.GetTextSize(t.text)
+        local pad = S(14)
+        local w, h = tw + pad * 2, th + S(10)
+        local x = (ScrW() - w) / 2
+
+        surface.SetDrawColor(10, 8, 6, a * 0.86) surface.DrawRect(x, y, w, h)
+        surface.SetDrawColor(t.col.r, t.col.g, t.col.b, a) surface.DrawOutlinedRect(x, y, w, h, 1)
+        surface.SetTextColor(0, 0, 0, a * 0.7) surface.SetTextPos(x + pad + 1, y + S(5) + 1) surface.DrawText(t.text)
+        surface.SetTextColor(t.col.r, t.col.g, t.col.b, a) surface.SetTextPos(x + pad, y + S(5)) surface.DrawText(t.text)
+        y = y + h + S(6)
+    end
+end)
+
+----------------------------------------------------------------------
+-- Canal STAFF : messages tchat visibles UNIQUEMENT par les super admins
+-- (le serveur n'envoie ce net qu'aux SA — un simple admin ne le reçoit pas).
+----------------------------------------------------------------------
+net.Receive("blood_staff_msg", function()
+    local text = net.ReadString()
+    chat.AddText(Color(170, 110, 220), "[STAFF] ", Color(220, 206, 174), text)
 end)
 
 ----------------------------------------------------------------------

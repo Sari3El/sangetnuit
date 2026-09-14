@@ -8,7 +8,8 @@ if SERVER then
     util.AddNetworkString("blood_sync")        -- pousse l'état du joueur (crédits, slots...)
     util.AddNetworkString("blood_open_menu")   -- ouvre le menu personnages
     util.AddNetworkString("blood_open_admin")  -- ouvre le menu admin (+ liste des races)
-    util.AddNetworkString("blood_notify")      -- message/notification
+    util.AddNetworkString("blood_notify")      -- message/notification (HUD)
+    util.AddNetworkString("blood_staff_msg")   -- message tchat STAFF (super admins only)
 
     -- Client -> Serveur
     util.AddNetworkString("blood_request_sync")  -- le client demande une resynchro

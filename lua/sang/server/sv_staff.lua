@@ -104,5 +104,9 @@ net.Receive("sang_staff", function(_, admin)
             (num ~= 0 and (" [" .. num .. "]") or "") ..
             (text ~= "" and (" \"" .. text .. "\"") or ""))
     end
-    if BLOOD.Notify then BLOOD.Notify(admin, "Staff : " .. action .. " sur " .. target:Nick() .. ".", "info") end
+    -- Retour visible dans le tchat des SUPER ADMINS uniquement.
+    if BLOOD.StaffNotify then
+        BLOOD.StaffNotify(admin:Nick() .. " → " .. action .. " sur " .. target:Nick() ..
+            (num ~= 0 and (" [" .. num .. "]") or "") .. (text ~= "" and (" « " .. text .. " »") or ""))
+    end
 end)

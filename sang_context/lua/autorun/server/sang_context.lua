@@ -55,19 +55,15 @@ net.Receive("sang_ctx_ticket", function(_, ply)
     if msg == "" then return end
     ply.SangTicketCD = CurTime() + TICKET_CD
 
-    local sent = 0
-    for _, a in ipairs(player.GetAll()) do
-        if BLOOD and BLOOD.IsAdmin and BLOOD.IsAdmin(a) then
-            a:ChatPrint("[TICKET] " .. ply:Nick() .. " : " .. msg)
-            if BLOOD.Notify then BLOOD.Notify(a, "Nouveau ticket de " .. ply:Nick() .. ".", "info") end
-            sent = sent + 1
-        end
+    -- Ticket -> tchat des SUPER ADMINS uniquement (canal staff).
+    if BLOOD and BLOOD.StaffNotify then
+        BLOOD.StaffNotify("Ticket de " .. ply:Nick() .. " : " .. msg)
     end
     if BLOOD and BLOOD.LogAdmin then
         BLOOD.LogAdmin("TICKET " .. ply:Nick() .. " (" .. ply:SteamID64() .. ") : " .. msg)
     end
+    -- Confirmation au joueur : HUD (via Notify), pas dans le tchat.
     if BLOOD and BLOOD.Notify then
-        BLOOD.Notify(ply, sent > 0 and "Ton ticket a été envoyé au staff." or
-            "Ton ticket est enregistré (aucun staff en ligne).", "info")
+        BLOOD.Notify(ply, "Ton ticket a été envoyé au staff.", "info")
     end
 end)

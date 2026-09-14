@@ -21,6 +21,19 @@ function BLOOD.Notify(ply, msg, kind)
     net.Send(ply)
 end
 
+-- Message du canal STAFF : envoyé au tchat des SUPER ADMINS uniquement
+-- (les simples admins ne le reçoivent pas). Utilisé par les commandes staff.
+function BLOOD.StaffNotify(text)
+    local recips = {}
+    for _, a in ipairs(player.GetAll()) do
+        if BLOOD.IsSuperAdmin and BLOOD.IsSuperAdmin(a) then recips[#recips + 1] = a end
+    end
+    if #recips == 0 then return end
+    net.Start("blood_staff_msg")
+    net.WriteString(text or "")
+    net.Send(recips)
+end
+
 ----------------------------------------------------------------------
 -- Le joueur possède-t-il au moins un personnage ?
 ----------------------------------------------------------------------
