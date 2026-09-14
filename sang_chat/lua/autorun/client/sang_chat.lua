@@ -188,9 +188,12 @@ local function drawLog()
             g.m + S(8), g.inputY + g.inh / 2, C.goldLt, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
         surface.SetDrawColor(C.goldDk)
         surface.DrawRect(g.m + g.pref - S(6), g.inputY + S(5), 1, g.inh - S(10))
-        -- rappel des touches, en haut du panneau (à gauche de la croix)
-        draw.SimpleText("Entrée : envoyer   ·   Échap : fermer", "SangChat_Hint",
-            g.m + g.cw - S(30), g.logTop - S(2), C.goldDk, TEXT_ALIGN_RIGHT, TEXT_ALIGN_BOTTOM)
+        -- rappel des touches — placé À L'INTÉRIEUR du panneau, avec ombre, pour
+        -- rester lisible sur n'importe quel fond de map.
+        local hint = "Entrée : envoyer   ·   Échap : fermer"
+        local hx, hy = g.m + g.cw - S(28), g.logTop - g.pad + S(2)
+        draw.SimpleText(hint, "SangChat_Hint", hx + 1, hy + 1, Color(0, 0, 0, 230), TEXT_ALIGN_RIGHT, TEXT_ALIGN_TOP)
+        draw.SimpleText(hint, "SangChat_Hint", hx,     hy,     C.goldLt,             TEXT_ALIGN_RIGHT, TEXT_ALIGN_TOP)
     end
 
     local total = #disp
@@ -434,4 +437,4 @@ end)
 --   Console :  sang_chat_open      (ouvre le tchat sans passer par la touche)
 ----------------------------------------------------------------------
 concommand.Add("sang_chat_open", function() openChat(false) end)
-MsgC(Color(210, 176, 108), "[sang_chat] chargé — build 4 (DFrame + DoModal + blocage StartChat)\n")
+MsgC(Color(210, 176, 108), "[sang_chat] chargé — build 5 (rappel touches lisible)\n")
