@@ -14,7 +14,7 @@ SARM = SARM or {}
 SARM.Config = SARM.Config or {}
 local C = SARM.Config
 
-C.ArmoireModel = "models/props_c17/FurnitureCabinet001a.mdl"
+C.ArmoireModel = "models/props_wasteland/controlroom_filecabinet001a.mdl"
 C.OpenDist     = 140 -- portée (unités) pour ouvrir / utiliser l'armoire
 C.OpenSound    = "items/ammocrate_open.wav"
 

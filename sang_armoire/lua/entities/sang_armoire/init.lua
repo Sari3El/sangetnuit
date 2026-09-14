@@ -3,7 +3,7 @@ AddCSLuaFile("cl_init.lua")
 include("shared.lua")
 
 function ENT:Initialize()
-    local model = (SARM and SARM.Config and SARM.Config.ArmoireModel) or "models/props_c17/FurnitureCabinet001a.mdl"
+    local model = (SARM and SARM.Config and SARM.Config.ArmoireModel) or "models/props_wasteland/controlroom_filecabinet001a.mdl"
     self:SetModel(model)
     self:PhysicsInit(SOLID_VPHYSICS)
     self:SetMoveType(MOVETYPE_VPHYSICS)

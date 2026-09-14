@@ -22,7 +22,7 @@ UTILISATION
 --------------------------------------------------------------------------
 - Faire apparaître une armoire :
     Menu Sandbox (Q) -> Entities -> "Sang et Nuit" -> "Armoire à PM (Sang et Nuit)".
-    (Modèle : FurnitureCabinet001a. Elle reste figée là où tu la poses.)
+    (Modèle : controlroom_filecabinet001a. Elle reste figée là où tu la poses.)
 
 - Vise l'armoire et fais [E] pour l'ouvrir. Le menu a deux colonnes :
 
