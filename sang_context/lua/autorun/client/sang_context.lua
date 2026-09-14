@@ -18,12 +18,24 @@ end
 --   lissage de la position (math.Approach + délai lié à la vélocité) et
 --   collision caméra (TraceLine, on ressort de 5u sur la normale).
 ----------------------------------------------------------------------
+-- Valeurs par défaut IDENTIQUES à Simple ThirdPerson (caméra pile derrière) :
+-- distance 100, right 0, up 0.
 local cv_enabled  = CreateClientConVar("sang_tp_enabled",   "0",   true, false) -- persistant
-local cv_dist     = CreateClientConVar("sang_tp_distance",  "110", true, false)
-local cv_right    = CreateClientConVar("sang_tp_right",     "20",  true, false)
+local cv_dist     = CreateClientConVar("sang_tp_distance",  "100", true, false)
+local cv_right    = CreateClientConVar("sang_tp_right",     "0",   true, false)
 local cv_up       = CreateClientConVar("sang_tp_up",        "0",   true, false)
 local cv_smooth   = CreateClientConVar("sang_tp_smooth",    "1",   true, false)
 local cv_collide  = CreateClientConVar("sang_tp_collision", "1",   true, false)
+
+-- Remise à zéro UNIQUE des réglages caméra (pour écraser une ancienne valeur
+-- déjà sauvegardée, ex. right=20) puis on respecte les réglages du joueur.
+local cv_ver = CreateClientConVar("sang_tp_ver", "0", true, false)
+if cv_ver:GetInt() < 2 then
+    RunConsoleCommand("sang_tp_distance", "100")
+    RunConsoleCommand("sang_tp_right", "0")
+    RunConsoleCommand("sang_tp_up", "0")
+    RunConsoleCommand("sang_tp_ver", "2")
+end
 
 local delayPos
 
