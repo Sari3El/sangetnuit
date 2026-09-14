@@ -13,37 +13,58 @@ local function amISuper()
 end
 
 ----------------------------------------------------------------------
--- Vue 1ère / 3ème personne (simple, côté client)
+-- Vue 1ère / 3ème personne
+--   Mode de fonctionnement repris de « Simple ThirdPerson » (FailCake) :
+--   lissage de la position (math.Approach + délai lié à la vélocité) et
+--   collision caméra (TraceLine, on ressort de 5u sur la normale).
 ----------------------------------------------------------------------
-local thirdPerson = false
+local cv_enabled  = CreateClientConVar("sang_tp_enabled",   "0",   true, false) -- persistant
+local cv_dist     = CreateClientConVar("sang_tp_distance",  "110", true, false)
+local cv_right    = CreateClientConVar("sang_tp_right",     "20",  true, false)
+local cv_up       = CreateClientConVar("sang_tp_up",        "0",   true, false)
+local cv_smooth   = CreateClientConVar("sang_tp_smooth",    "1",   true, false)
+local cv_collide  = CreateClientConVar("sang_tp_collision", "1",   true, false)
+
+local delayPos
 
 local function toggleThirdPerson()
-    thirdPerson = not thirdPerson
+    delayPos = nil -- évite un saut de caméra à l'activation
+    RunConsoleCommand("sang_tp_enabled", cv_enabled:GetBool() and "0" or "1")
 end
 
-hook.Add("CalcView", "SangCtx_ThirdPerson", function(ply, pos, ang, fov)
-    if not thirdPerson then return end
+hook.Add("CalcView", "SangCtx_ThirdPerson", function(ply, pos, angles, fov)
+    if not cv_enabled:GetBool() then return end
     if not (IsValid(ply) and ply:Alive()) or ply:InVehicle() then return end
 
-    local desired = pos - ang:Forward() * 110 + ang:Right() * 20 + ang:Up() * 4
-    local tr = util.TraceHull({
-        start  = pos,
-        endpos = desired,
-        filter = ply,
-        mins   = Vector(-4, -4, -4),
-        maxs   = Vector(4, 4, 4),
-        mask   = MASK_SOLID,
-    })
-    return {
-        origin     = tr.Hit and (tr.HitPos + tr.HitNormal * 4) or desired,
-        angles     = ang,
-        fov        = fov,
-        drawviewer = true,
-    }
+    if not delayPos then delayPos = pos end
+
+    local Forward, Right, Up = cv_dist:GetFloat(), cv_right:GetFloat(), cv_up:GetFloat()
+
+    -- lissage
+    if cv_smooth:GetBool() then
+        delayPos = delayPos + (ply:GetVelocity() * (FrameTime() / 10))
+        delayPos.x = math.Approach(delayPos.x, pos.x, math.abs(delayPos.x - pos.x) * 0.3)
+        delayPos.y = math.Approach(delayPos.y, pos.y, math.abs(delayPos.y - pos.y) * 0.3)
+        delayPos.z = math.Approach(delayPos.z, pos.z, math.abs(delayPos.z - pos.z) * 0.3)
+    else
+        delayPos = pos
+    end
+
+    local view = { angles = angles, fov = fov, drawviewer = true }
+    local target = delayPos + angles:Forward() * -Forward + angles:Right() * Right + angles:Up() * Up
+
+    if cv_collide:GetBool() then
+        local tr = util.TraceLine({ start = delayPos, endpos = target, filter = ply })
+        view.origin = tr.HitPos
+        if tr.Fraction < 1.0 then view.origin = view.origin + tr.HitNormal * 5 end
+    else
+        view.origin = target
+    end
+    return view
 end)
 
 hook.Add("ShouldDrawLocalPlayer", "SangCtx_ThirdPerson", function()
-    if thirdPerson then return true end
+    if cv_enabled:GetBool() then return true end
 end)
 
 ----------------------------------------------------------------------
