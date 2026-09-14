@@ -99,6 +99,7 @@ end
 local BUTTONS = {
     { l = "Jeter des Covan",          fn = promptDrop },
     { l = "Vue 1ère / 3ème personne", fn = toggleThirdPerson },
+    { l = "Couper les sons",          fn = function() RunConsoleCommand("stopsound") end },
     { l = "Faire un ticket",          fn = promptTicket },
     { l = "Règles & aide",            fn = openRules },
 }
