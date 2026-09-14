@@ -1,0 +1,56 @@
+==========================================================================
+  SANG ET NUIT — ARMOIRE À PM (addon séparé)
+==========================================================================
+
+Addon INDÉPENDANT. Il DÉPEND de "sang_et_nuit" (thème des menus BLOOD.UI) et,
+pour afficher le job/faction du joueur, de "sang_jobs". Installe-les tous
+côte à côte dans addons/.
+
+--------------------------------------------------------------------------
+INSTALLATION
+--------------------------------------------------------------------------
+Copie le dossier "sang_armoire" dans :
+   ...\GarrysMod\garrysmod\addons\
+
+Côte à côte avec les autres :
+   ...\addons\sang_et_nuit\
+   ...\addons\sang_jobs\
+   ...\addons\sang_armoire\
+
+--------------------------------------------------------------------------
+UTILISATION
+--------------------------------------------------------------------------
+- Faire apparaître une armoire :
+    Menu Sandbox (Q) -> Entities -> "Sang et Nuit" -> "Armoire à PM (Sang et Nuit)".
+    (Modèle : FurnitureCabinet001a. Elle reste figée là où tu la poses.)
+
+- Vise l'armoire et fais [E] pour l'ouvrir. Le menu a deux colonnes :
+
+    * Gauche  — « Apparence du PM porté » : la liste des bodygroups du PM
+      actuellement en main, avec des flèches < / > pour changer chaque
+      partie. C'est générique : ça lit les bodygroups RÉELS du modèle de
+      l'arme, rien à configurer. Si le PM n'a qu'un seul choix par groupe
+      (cas de weapon_smg1 de base), rien n'apparaît — normal, il faudra un
+      modèle de PM avec plusieurs sous-modèles pour en profiter.
+      Le choix est sauvegardé (par joueur + par classe d'arme) et réappliqué
+      automatiquement à chaque fois que ce PM est rééquipé.
+
+    * Droite — « PM disponibles » : les PM que le job (ou, à défaut, la
+      faction) du joueur autorise, avec un bouton "Équiper". Équiper un PM
+      retire automatiquement celui déjà porté (un seul PM à la fois).
+
+--------------------------------------------------------------------------
+RÉGLAGES  (lua/sang_armoire/sh_config.lua)
+--------------------------------------------------------------------------
+   ArmoireModel, OpenDist, OpenSound.
+   PMClasses       : classes d'arme éditables/équipables via l'armoire.
+   JobWeapons      : PM disponibles pour un job précis (id sang_jobs).
+   FactionWeapons  : PM disponibles par défaut pour une faction entière
+                     (utilisé si le job n'a pas d'entrée dans JobWeapons).
+
+Par défaut, seul weapon_smg1 (le PM de base HL2) est déclaré, pour Empire et
+Consortium. Ajoute tes propres SWEP de PM dans PMClasses puis dans
+JobWeapons/FactionWeapons au fur et à mesure que tu les crées — plus le
+modèle a de bodygroups (crosse, silencieux, lunette...), plus la colonne de
+gauche aura de choix à proposer.
+==========================================================================
