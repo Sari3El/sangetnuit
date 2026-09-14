@@ -363,6 +363,43 @@ BLOOD.NetReceive("origines_query_statoverride", 0.15, function(_, ply)
     sendStatOverride(ply, sid, slot, job)
 end)
 
+----------------------------------------------------------------------
+-- Slot EVENT : débloquer (un joueur / tous) + forcer tous sur EVENT
+----------------------------------------------------------------------
+BLOOD.NetReceive("origines_event_unlock", 0.3, function(_, ply)
+    if not BLOOD.IsAdmin(ply) then
+        logAdmin("REFUS event_unlock de " .. ply:Nick() .. " (" .. ply:SteamID64() .. ") — non autorisé")
+        return
+    end
+    local scope = net.ReadString()
+    local sid   = BLOOD.NormalizeSteamID(net.ReadString() or "")
+
+    if scope == "all" then
+        local n = 0
+        for _, t in ipairs(player.GetAll()) do BLOOD.SetEventUnlocked(t:SteamID64(), true) n = n + 1 end
+        logAdmin(ply:Nick() .. " (" .. ply:SteamID64() .. ") a débloqué le slot EVENT pour TOUS (" .. n .. ")")
+        BLOOD.Notify(ply, "Slot EVENT débloqué pour tout le monde (" .. n .. ").", "info")
+    else
+        if not sid then BLOOD.Notify(ply, "SteamID cible invalide.", "error") return end
+        BLOOD.SetEventUnlocked(sid, true)
+        logAdmin(ply:Nick() .. " (" .. ply:SteamID64() .. ") a débloqué le slot EVENT pour " .. sid)
+        BLOOD.Notify(ply, "Slot EVENT débloqué pour " .. sid .. ".", "info")
+    end
+end)
+
+BLOOD.NetReceive("origines_event_forceall", 0.5, function(_, ply)
+    if not BLOOD.IsAdmin(ply) then
+        logAdmin("REFUS event_forceall de " .. ply:Nick() .. " (" .. ply:SteamID64() .. ") — non autorisé")
+        return
+    end
+    local n = 0
+    for _, t in ipairs(player.GetAll()) do
+        if IsValid(t) and t:IsPlayer() then BLOOD.SelectEventSlot(t, true) n = n + 1 end
+    end
+    logAdmin(ply:Nick() .. " (" .. ply:SteamID64() .. ") a FORCÉ " .. n .. " joueur(s) sur le slot EVENT")
+    BLOOD.Notify(ply, n .. " joueur(s) basculé(s) sur le slot EVENT.", "info")
+end)
+
 BLOOD.NetReceive("origines_set_covan", 0.3, function(_, ply)
     if not BLOOD.IsAdmin(ply) then
         logAdmin("REFUS set_covan de " .. ply:Nick() .. " (" .. ply:SteamID64() .. ") — non autorisé")

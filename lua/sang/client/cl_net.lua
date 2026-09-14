@@ -32,6 +32,11 @@ net.Receive("blood_sync", function()
         end
     end
 
+    -- Slot EVENT (spécial)
+    d.eventUnlocked = net.ReadBool()
+    d.eventExists   = net.ReadBool()
+    d.eventName     = d.eventExists and net.ReadString() or nil
+
     BLOOD.MyData = d
     if IsValid(BLOOD.MenuFrame) and BLOOD.RefreshMenu then
         BLOOD.RefreshMenu()

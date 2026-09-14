@@ -37,4 +37,8 @@ if SERVER then
     util.AddNetworkString("origines_clear_statoverride") -- C->S : effacer (auto)
     util.AddNetworkString("origines_query_statoverride") -- C->S : demander les valeurs actuelles
     util.AddNetworkString("origines_statoverride_info")  -- S->C : valeurs actuelles
+
+    -- Admin : slot EVENT
+    util.AddNetworkString("origines_event_unlock")   -- C->S : débloquer EVENT (un joueur / tous)
+    util.AddNetworkString("origines_event_forceall") -- C->S : forcer tous les joueurs sur EVENT
 end

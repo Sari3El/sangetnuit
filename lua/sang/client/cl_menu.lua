@@ -148,6 +148,34 @@ function BLOOD.RefreshMenu()
             end
         end
     end
+
+    -- Slot EVENT (spécial) : visible seulement s'il est débloqué pour ce joueur.
+    if d.eventUnlocked and not d.mustCreate then
+        local es = cfg.EventSlot or 5
+        local active = (es == d.activeSlot)
+        local purple = Color(160, 92, 214)
+        local row = vgui.Create("DPanel", body)
+        row:Dock(TOP) row:DockMargin(0, S(4), 0, S(6)) row:SetTall(S(58))
+        row.Paint = function(_, w, h)
+            UI.VGradient(0, 0, w, h, active and UI.Shade(C.bg3, 4) or C.bg2, C.bg0)
+            surface.SetDrawColor(active and purple or C.goldDk)
+            surface.DrawOutlinedRect(0, 0, w, h, 1)
+            if active then surface.SetDrawColor(purple) surface.DrawRect(0, 0, S(3), h) end
+            draw.SimpleText("Slot EVENT  —  " .. (d.eventName or "nouveau"), "SangUI_Body",
+                S(12), S(12), active and purple or C.txt, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+            draw.SimpleText("Personnage d'évènement (niveau figé)" .. (active and "     ● ACTIF" or ""),
+                "SangUI_Small", S(12), S(33), C.txtDim, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+        end
+        local play = vgui.Create("DButton", row)
+        play:Dock(RIGHT) play:DockMargin(S(6), S(12), S(12), S(12)) play:SetWide(S(96))
+        play:SetText(active and "Actif" or "Jouer")
+        play:SetEnabled(not active)
+        UI.SkinButton(play, active and "default" or "gold")
+        play.DoClick = function()
+            net.Start("blood_select_slot") net.WriteUInt(es, 8) net.SendToServer()
+            if IsValid(BLOOD.MenuFrame) then BLOOD.MenuFrame:Remove() end
+        end
+    end
 end
 
 ----------------------------------------------------------------------

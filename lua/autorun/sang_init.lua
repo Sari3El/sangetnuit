@@ -39,6 +39,7 @@ local MODULES = {
     { "sang/client/cl_theme.lua", "cl" },
     { "sang/client/cl_menu.lua",  "cl" },
     { "sang/client/cl_admin.lua", "cl" },
+    { "sang/client/cl_admin_event.lua", "cl" }, -- boutons EVENT dans Origines
     { "sang/client/cl_hud.lua",   "cl" },
     { "sang/client/cl_weaponselect.lua", "cl" },
     { "sang/client/cl_reroll.lua", "cl" },

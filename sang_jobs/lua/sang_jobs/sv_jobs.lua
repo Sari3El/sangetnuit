@@ -63,19 +63,27 @@ function SJOB.SetJob(ply, jobId, silent)
 end
 
 ----------------------------------------------------------------------
--- F4 : choix de job
+-- Loadout fixe : chaque joueur ne reçoit QUE les mains + physgun + toolgun +
+-- gravity gun (plus les touches de base GMod). Les SWEP de race (sorts) seront
+-- redonnés plus tard par ApplyRaceStats quand ils existeront.
 ----------------------------------------------------------------------
-SJOB.NetReceive("sjob_set", 0.5, function(_, ply)
-    local jobId = net.ReadString()
-    if BLOOD.HasCharacter and not BLOOD.HasCharacter(ply) then
-        notify(ply, "Crée d'abord un personnage.", "error")
-        return
-    end
-    if ply.SJobNext and CurTime() < ply.SJobNext then return end
-    ply.SJobNext = CurTime() + (C.ChangeCooldown or 2)
-    if not SJOB.JobExists(jobId) then return end
-    SJOB.SetJob(ply, jobId)
+hook.Add("PlayerLoadout", "SJOB_Loadout", function(ply)
+    ply:StripWeapons()
+    -- Pas de perso encore (joueur verrouillé) : aucune arme.
+    if BLOOD and BLOOD.HasCharacter and not BLOOD.HasCharacter(ply) then return true end
+    ply:Give("weapon_sang_mains")
+    ply:Give("weapon_physgun")
+    ply:Give("gmod_tool")
+    ply:Give("weapon_physcannon")
+    ply:SelectWeapon("weapon_sang_mains")
+    return true -- on gère le loadout : bloque celui du sandbox par défaut
 end)
+
+----------------------------------------------------------------------
+-- (Changement de job par le joueur DÉSACTIVÉ)
+--   Le F4 est retiré et le net « sjob_set » n'existe plus : seul le staff
+--   peut définir le job d'un slot (via Origines / sjob_admin_setjob).
+----------------------------------------------------------------------
 
 ----------------------------------------------------------------------
 -- Admin (Config Perso)
@@ -93,7 +101,8 @@ SJOB.NetReceive("sjob_admin_setjob", 0.3, function(_, ply)
     local sid = BLOOD.NormalizeSteamID(net.ReadString())
     local slot = net.ReadUInt(8)
     local jobId = net.ReadString()
-    if not sid or slot < 1 or slot > 4 or not SJOB.JobExists(jobId) then return end
+    local maxSlot = (BLOOD and BLOOD.Config and BLOOD.Config.EventSlot) or 5
+    if not sid or slot < 1 or slot > maxSlot or not SJOB.JobExists(jobId) then return end
 
     SJOB.SQL.SetCharJob(sid, slot, jobId)
     local target = BLOOD.GetPlayerBySteamID64(sid)

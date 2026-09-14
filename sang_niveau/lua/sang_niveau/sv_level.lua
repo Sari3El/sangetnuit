@@ -105,6 +105,8 @@ end)
 -- XP / montée de niveau
 ----------------------------------------------------------------------
 function SLVL.AddXP(ply, amount)
+    -- Slot EVENT : niveau figé, aucun gain d'XP.
+    if BLOOD and BLOOD.Config and ply.BloodActiveSlot == BLOOD.Config.EventSlot then return end
     local d = ply.SLVL
     if not d or d.level >= C.MaxLevel then return end
     d.xp = d.xp + math.floor(amount)

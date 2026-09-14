@@ -29,6 +29,9 @@ function BLOOD.HasCharacter(ply)
     for i = 1, C.MaxSlots do
         if ply.BloodSlots[i] then return true end
     end
+    -- Le perso EVENT compte aussi (sinon un joueur forcé sur EVENT sans perso
+    -- normal serait verrouillé et sans loadout).
+    if ply.BloodSlots[C.EventSlot] then return true end
     return false
 end
 
@@ -69,6 +72,12 @@ function BLOOD.SyncPlayer(ply)
                 net.WriteString(s.race or "human")
             end
         end
+
+        -- Slot EVENT (spécial)
+        net.WriteBool(ply.BloodEventUnlocked and true or false)
+        local ev = slots[C.EventSlot]
+        net.WriteBool(ev ~= nil)
+        if ev then net.WriteString(ev.name or "EVENT") end
     net.Send(ply)
 end
 
@@ -80,10 +89,11 @@ function BLOOD.LoadPlayer(ply)
     local sid = ply:SteamID64()
     BLOOD.SQL.EnsurePlayerRow(sid)
 
-    ply.BloodSlots        = BLOOD.SQL.GetSlots(sid) -- peut être vide (1re fois)
-    ply.BloodCredits      = BLOOD.GetCredits(sid)
-    ply.BloodActiveSlot   = BLOOD.SQL.GetActiveSlot(sid)
-    ply.BloodPaidUnlocked = BLOOD.SQL.GetPaidUnlocked(sid)
+    ply.BloodSlots         = BLOOD.SQL.GetSlots(sid) -- peut être vide (1re fois)
+    ply.BloodCredits       = BLOOD.GetCredits(sid)
+    ply.BloodActiveSlot    = BLOOD.SQL.GetActiveSlot(sid)
+    ply.BloodPaidUnlocked  = BLOOD.SQL.GetPaidUnlocked(sid)
+    ply.BloodEventUnlocked = BLOOD.SQL.GetEventUnlocked(sid)
 
     ply:SetNWInt("blood_credits", ply.BloodCredits)
 end
@@ -117,10 +127,53 @@ hook.Add("PlayerSpawn", "BLOOD_Spawn", function(ply)
 end)
 
 ----------------------------------------------------------------------
+-- Slot EVENT (spécial)
+----------------------------------------------------------------------
+-- Crée le perso EVENT du joueur s'il n'existe pas (nom « EVENT <pseudo> »,
+-- job "event" par défaut).
+function BLOOD.EnsureEventChar(ply)
+    if not IsValid(ply) then return end
+    local sid, es = ply:SteamID64(), C.EventSlot
+    ply.BloodSlots = ply.BloodSlots or {}
+    if not ply.BloodSlots[es] then
+        local nm = "EVENT " .. ply:Nick()
+        BLOOD.SQL.CreateSlot(sid, es, nm, "human")
+        ply.BloodSlots[es] = { name = nm, race = "human", covan = 0, hunger = C.HungerMax }
+        if SJOB and SJOB.SQL and SJOB.SQL.SetCharJob then
+            SJOB.SQL.SetCharJob(sid, es, (SJOB.Config and SJOB.Config.EventJob) or "event")
+        end
+    end
+end
+
+-- Bascule le joueur sur son slot EVENT (débloque et crée au besoin).
+function BLOOD.SelectEventSlot(ply, forceUnlock)
+    if not IsValid(ply) then return end
+    if forceUnlock and not ply.BloodEventUnlocked then
+        BLOOD.SetEventUnlocked(ply:SteamID64(), true)
+    end
+    if not ply.BloodEventUnlocked then
+        BLOOD.Notify(ply, "Le slot EVENT n'est pas débloqué.", "error")
+        return
+    end
+    BLOOD.EnsureEventChar(ply)
+    ply.BloodActiveSlot = C.EventSlot
+    BLOOD.SQL.SetActiveSlot(ply:SteamID64(), C.EventSlot)
+    BLOOD.SetLocked(ply, false)
+    hook.Run("BLOOD_CharacterChanged", ply, C.EventSlot)
+    ply:Spawn()
+    BLOOD.SyncPlayer(ply)
+    BLOOD.Notify(ply, "Slot EVENT sélectionné.", "info")
+end
+
+----------------------------------------------------------------------
 -- Sélection d'un slot (le "jouer")
 ----------------------------------------------------------------------
 BLOOD.NetReceive("blood_select_slot", 0.5, function(_, ply)
     local slot = net.ReadUInt(8)
+    if slot == C.EventSlot then
+        BLOOD.SelectEventSlot(ply, false) -- ne débloque pas de lui-même
+        return
+    end
     if slot < 1 or slot > C.MaxSlots then return end
 
     if slot > C.FreeSlots and not ply.BloodPaidUnlocked then

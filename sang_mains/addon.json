@@ -1,0 +1,6 @@
+{
+    "title": "Sang et Nuit — SWEP Mains",
+    "type": "weapon",
+    "tags": ["roleplay", "fun"],
+    "ignore": ["*.md", "*.txt", ".git/*", ".gitignore"]
+}

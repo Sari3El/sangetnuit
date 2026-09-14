@@ -12,7 +12,8 @@ local MODULES = {
     { "sang_jobs/sh_net.lua",     "sh" },
     { "sang_jobs/sv_sql.lua",     "sv" },
     { "sang_jobs/sv_jobs.lua",    "sv" },
-    { "sang_jobs/cl_f4.lua",      "cl" },
+    -- F4 (choix de job par le joueur) DÉSACTIVÉ : le fichier cl_f4.lua n'est
+    -- plus chargé. Seul le staff définit les jobs (via Origines).
     { "sang_jobs/cl_board.lua",   "cl" },
     { "sang_jobs/cl_origines.lua","cl" },
 }

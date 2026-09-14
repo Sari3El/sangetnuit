@@ -31,6 +31,9 @@ C.BaseRunSpeed  = 400   -- vitesse "course" moteur (avant multiplicateur de race
 -- Slots de personnage
 C.MaxSlots  = 4   -- 4 slots maximum
 C.FreeSlots = 3   -- slots 1..3 gratuits ; slot 4 = payant (voir déblocage)
+-- Slot spécial EVENT (au-delà des slots normaux) : verrouillé par défaut,
+-- niveau figé, spawn dans le job "event". Débloqué par le staff (Origines).
+C.EventSlot = C.MaxSlots + 1   -- = 5
 
 -- Reroll
 C.RerollCost     = 1     -- 1 crédit = 1 reroll (coût fixe)

@@ -54,6 +54,14 @@ function BLOOD.SQL.Init()
         sql.Query("ALTER TABLE blood_slots ADD COLUMN hunger INTEGER NOT NULL DEFAULT " .. defHunger .. ";")
     end
 
+    -- Migration : déblocage du slot EVENT (par joueur)
+    local pcols = sql.Query("PRAGMA table_info(blood_players);")
+    local phas = {}
+    if istable(pcols) then for _, c in ipairs(pcols) do phas[c.name] = true end end
+    if not phas.event_unlocked then
+        sql.Query("ALTER TABLE blood_players ADD COLUMN event_unlocked INTEGER NOT NULL DEFAULT 0;")
+    end
+
     -- Rareté des sangs : override admin du poids de tirage + palier par race.
     sql.Query([[CREATE TABLE IF NOT EXISTS blood_rarity (
         race   TEXT PRIMARY KEY,
@@ -210,6 +218,26 @@ function BLOOD.SetPaidSlotUnlocked(sid64, unlocked)
     local ply = BLOOD.GetPlayerBySteamID64(sid64)
     if IsValid(ply) then
         ply.BloodPaidUnlocked = unlocked and true or false
+        if BLOOD.SyncPlayer then BLOOD.SyncPlayer(ply) end
+    end
+end
+
+----------------------------------------------------------------------
+-- Slot EVENT débloqué (par joueur)
+----------------------------------------------------------------------
+function BLOOD.SQL.GetEventUnlocked(sid64)
+    local v = sql.QueryValue("SELECT event_unlocked FROM blood_players WHERE steamid64 = " .. E(sid64) .. ";")
+    return tonumber(v) == 1
+end
+
+function BLOOD.SetEventUnlocked(sid64, unlocked)
+    sid64 = tostring(sid64)
+    BLOOD.SQL.EnsurePlayerRow(sid64)
+    sql.Query("UPDATE blood_players SET event_unlocked = " .. (unlocked and 1 or 0)
+        .. " WHERE steamid64 = " .. E(sid64) .. ";")
+    local ply = BLOOD.GetPlayerBySteamID64(sid64)
+    if IsValid(ply) then
+        ply.BloodEventUnlocked = unlocked and true or false
         if BLOOD.SyncPlayer then BLOOD.SyncPlayer(ply) end
     end
 end
