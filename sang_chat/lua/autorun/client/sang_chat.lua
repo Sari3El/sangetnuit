@@ -302,9 +302,6 @@ local function openChat(teamMode)
     frame:SetSizable(false)
     frame:DockPadding(0, 0, 0, 0)
     frame.Paint = function() end
-    frame:MakePopup()
-    frame:SetKeyboardInputEnabled(true)
-    frame:SetMouseInputEnabled(true)
     frame.OnMouseWheeled = function(_, d) scroll = scroll + d return true end
     -- Échap au niveau de la fenêtre (chemin le plus direct).
     frame.OnKeyCodePressed = function(_, key)
@@ -351,12 +348,14 @@ local function openChat(teamMode)
     end
 
     isOpen = true
-    -- Focus donné à la frame suivante : RequestFocus dans la même frame que la
-    -- création ne « prend » pas toujours (le système de focus se met à jour au
-    -- tick suivant).
+
+    -- Séquence EXACTE de Derma_StringRequest (qui, lui, reçoit bien le clavier) :
+    -- tout est construit AVANT, puis MakePopup -> DoModal -> RequestFocus tout à
+    -- la fin. RequestFocus rejoué à la frame suivante par sécurité.
+    frame:MakePopup()
+    frame:DoModal()
     entry:RequestFocus()
     timer.Simple(0, function() if IsValid(entry) then entry:RequestFocus() end end)
-    hook.Run("StartChat", curTeam)
 end
 
 -- Échap : sur un panneau MakePopup, la touche Échap est captée par le moteur
@@ -397,6 +396,15 @@ hook.Add("PlayerBindPress", "SangChat_Open", function(_, bind, pressed)
     if bind == "messagemode2" then openChat(true)  return true end
 end)
 
+-- IMPORTANT : empêche le tchat moteur par défaut de s'ouvrir. Sinon il capte le
+-- clavier au niveau moteur (sa ligne de saisie est masquée avec CHudChat) et
+-- notre zone de texte ne reçoit RIEN : on tape dans le vide, Entrée envoie via
+-- LUI et le referme LUI, mais notre panneau reste ouvert. On ouvre le nôtre.
+hook.Add("StartChat", "SangChat_Block", function(isTeam)
+    if not IsValid(frame) then openChat(isTeam and true or false) end
+    return true
+end)
+
 -- Messages des joueurs (nom coloré, préfixes MORT / Équipe)
 hook.Add("OnPlayerChat", "SangChat_Player", function(ply, text, teamChat, isDead)
     local C = COL()
@@ -420,3 +428,10 @@ hook.Add("ChatText", "SangChat_Engine", function(_, _, text, mtype)
     pushLine({ COL().txtDim, text })
     return true
 end)
+
+----------------------------------------------------------------------
+-- Diagnostic : confirme quelle version est chargée + ouverture manuelle.
+--   Console :  sang_chat_open      (ouvre le tchat sans passer par la touche)
+----------------------------------------------------------------------
+concommand.Add("sang_chat_open", function() openChat(false) end)
+MsgC(Color(210, 176, 108), "[sang_chat] chargé — build 4 (DFrame + DoModal + blocage StartChat)\n")
