@@ -202,21 +202,22 @@ local function drawLog()
     local endI = total - scroll
     local startI = math.max(1, endI - visible + 1)
 
-    render.SetScissorRect(g.m - g.pad, g.logTop - S(4), g.m + g.cw + g.pad, g.logBottom + S(2), true)
+    -- On dessine EXACTEMENT le nombre de lignes qui tiennent (pas de découpe
+    -- render.SetScissorRect : c'était le risque de faire disparaître le HUD si
+    -- quoi que ce soit tournait mal). Le retour à la ligne borne déjà la largeur.
+    surface.SetFont(FONT)
     local y = g.logBottom - lineH
     for i = endI, startI, -1 do
         local d = disp[i]
-        surface.SetFont(FONT)
         for _, tok in ipairs(d.row) do
+            local c = tok.color or C.txt
             surface.SetTextColor(0, 0, 0, d.a * 0.75)
             surface.SetTextPos(g.m + tok.x + 1, y + 1) surface.DrawText(tok.text)
-            local c = tok.color
             surface.SetTextColor(c.r, c.g, c.b, d.a)
             surface.SetTextPos(g.m + tok.x, y) surface.DrawText(tok.text)
         end
         y = y - lineH
     end
-    render.SetScissorRect(0, 0, 0, 0, false)
     return lineH
 end
 
@@ -347,11 +348,12 @@ local function openChat(teamMode)
 
     isOpen = true
 
-    -- Séquence EXACTE de Derma_StringRequest (qui, lui, reçoit bien le clavier) :
-    -- tout est construit AVANT, puis MakePopup -> DoModal -> RequestFocus tout à
-    -- la fin. RequestFocus rejoué à la frame suivante par sécurité.
+    -- Tout est construit AVANT, puis MakePopup + RequestFocus à la fin.
+    -- PAS de DoModal : un panneau modal bloque l'input de TOUT le reste (TAB,
+    -- HUD, sélecteur d'arme...) et peut rester coincé -> « seul le tchat marche ».
+    -- MakePopup suffit (le tchat moteur est bloqué par le hook StartChat, donc
+    -- le clavier arrive bien chez nous).
     frame:MakePopup()
-    frame:DoModal()
     entry:RequestFocus()
     timer.Simple(0, function() if IsValid(entry) then entry:RequestFocus() end end)
 end
@@ -441,4 +443,4 @@ end)
 --   Console :  sang_chat_open      (ouvre le tchat sans passer par la touche)
 ----------------------------------------------------------------------
 concommand.Add("sang_chat_open", function() openChat(false) end)
-MsgC(Color(210, 176, 108), "[sang_chat] chargé — build 6 (anti-crash rendu : le HUD ne peut plus disparaître)\n")
+MsgC(Color(210, 176, 108), "[sang_chat] chargé — build 7 (sans DoModal ni scissor : n'affecte plus le reste)\n")
