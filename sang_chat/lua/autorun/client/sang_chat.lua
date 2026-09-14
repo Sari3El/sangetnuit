@@ -101,6 +101,8 @@ local function buildRows(raw)
         row, x = {}, 0
     end
     local function put(txt, col)
+        txt = tostring(txt or "")
+        col = IsColor(col) and col or C.txt   -- couleur toujours valide (anti-crash rendu)
         local w = surface.GetTextSize(txt)
         if x > 0 and x + w > g.maxw then flush() end
         row[#row + 1] = { text = txt, color = col, x = x }
@@ -381,8 +383,17 @@ hook.Add("HUDShouldDraw", "SangChat_HideDefault", function(name)
     if name == "CHudChat" then return false end
 end)
 
+-- IMPORTANT : drawLog active un render.SetScissorRect (découpe) puis le
+-- désactive. Si une erreur survenait entre les deux, le scissor restait actif
+-- pour TOUT le reste de la frame -> le HUD et le scoreboard (pass vgui) étaient
+-- découpés hors écran : « il ne reste que le tchat ». On protège donc l'appel :
+-- quoi qu'il arrive, on remet le scissor à zéro et le reste du HUD s'affiche.
 hook.Add("HUDPaint", "SangChat_Draw", function()
-    drawLog()
+    local ok, err = pcall(drawLog)
+    if not ok then
+        render.SetScissorRect(0, 0, 0, 0, false)
+        ErrorNoHalt("[sang_chat] HUDPaint: " .. tostring(err) .. "\n")
+    end
 end)
 
 hook.Add("PlayerBindPress", "SangChat_Open", function(_, bind, pressed)
@@ -430,4 +441,4 @@ end)
 --   Console :  sang_chat_open      (ouvre le tchat sans passer par la touche)
 ----------------------------------------------------------------------
 concommand.Add("sang_chat_open", function() openChat(false) end)
-MsgC(Color(210, 176, 108), "[sang_chat] chargé — build 5 (rappel touches lisible)\n")
+MsgC(Color(210, 176, 108), "[sang_chat] chargé — build 6 (anti-crash rendu : le HUD ne peut plus disparaître)\n")
