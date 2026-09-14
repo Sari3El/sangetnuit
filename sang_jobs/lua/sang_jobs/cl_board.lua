@@ -46,7 +46,6 @@ local STAFF = {
     { l = "Donner une arme", a = "giveitem", str = true, t = "Classe de l'arme (ex: weapon_pistol) :" },
     { l = "Changer le job",  a = "setjob",   jobs = true },
     { l = "Définir Covan",   a = "setcovan", num = true, t = "Nouveau montant de Covan :" },
-    { l = "Donner de l'or",  a = "addcovan", num = true, t = "Montant de Covan à donner :" },
     { l = "Tuer",            a = "slay",  k = "blood" },
     { l = "Kick",            a = "kick",  k = "blood", str = true, t = "Raison du kick :" },
     { l = "Ban (minutes)",   a = "ban",   k = "blood", num = true, t = "Durée en minutes (0 = permanent) :" },
@@ -226,7 +225,7 @@ local function buildBoard()
         UI.Panel(0, 0, pw, ph)
         UI.VGradient(S(3), S(3), pw - S(6), S(52), UI.Shade(C.bg3, 8), C.bg1)
         draw.SimpleText(GetHostName() or "Serveur", "SangUI_H1", S(16), S(14), C.goldLt, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
-        draw.SimpleText(#player.GetAll() .. " / " .. game.MaxPlayers() .. " joueurs   —   clique un joueur",
+        draw.SimpleText(#player.GetAll() .. " / " .. game.MaxPlayers() .. " joueurs",
             "SangUI_Small", pw - S(16), S(26), C.txtDim, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
     end
 
@@ -341,8 +340,9 @@ hook.Add("ScoreboardShow", "SJOB_Board", function()
 end)
 
 hook.Add("ScoreboardHide", "SJOB_Board", function()
-    -- La boîte staff grabbe le curseur/clavier : ne jamais la laisser derrière.
-    if IsValid(staffDialog) then staffDialog:Remove() staffDialog = nil end
+    -- On NE ferme PAS une boîte de saisie staff en cours (Définir PV, Kick...) :
+    -- elle a son propre curseur + clavier (MakePopup), donc on peut lâcher TAB
+    -- pour écrire dedans. Elle se referme via Valider / Annuler / Échap.
     if IsValid(board) then board:Remove() board = nil end
     return true
 end)
