@@ -22,6 +22,32 @@ function BLOOD.IsAdmin(ply)
     return false
 end
 
+-- Super admin = rang le plus élevé (voit les infos joueur dans le scoreboard).
+--   -> whitelist SteamID64 (C.Admins) OU super admin GMod. Un simple admin/mod
+--      GMod n'en fait PAS partie.
+function BLOOD.IsSuperAdmin(ply)
+    if not IsValid(ply) then return false end
+    if C.Admins[ply:SteamID64()] then return true end
+    if ply:IsSuperAdmin() then return true end
+    return false
+end
+
+-- Statut admin/super networké vers le client (BLOOD.IsAdmin est serveur-only :
+-- sans ça, le client ne peut pas savoir s'il doit afficher la grille staff).
+function BLOOD.SyncAdminFlags(ply)
+    if not IsValid(ply) then return end
+    ply:SetNWBool("sang_is_admin", BLOOD.IsAdmin(ply))
+    ply:SetNWBool("sang_is_superadmin", BLOOD.IsSuperAdmin(ply))
+end
+
+hook.Add("PlayerInitialSpawn", "BLOOD_SyncAdminFlags", function(ply)
+    timer.Simple(1, function() BLOOD.SyncAdminFlags(ply) end)
+end)
+-- Resync des connectés au (re)chargement du script.
+timer.Simple(1, function()
+    for _, p in ipairs(player.GetAll()) do BLOOD.SyncAdminFlags(p) end
+end)
+
 ----------------------------------------------------------------------
 -- Log admin (console + fichier data/sang/admin_log.txt)
 ----------------------------------------------------------------------

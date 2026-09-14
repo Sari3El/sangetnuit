@@ -37,6 +37,38 @@ local ACTIONS = {
     bring = function(a, t) t:SetPos(a:GetPos() + a:GetForward() * 60 + Vector(0, 0, 8)) end,
     goto  = function(a, t) a:SetPos(t:GetPos() + t:GetForward() * 60 + Vector(0, 0, 8)) end,
 
+    -- Donner une arme (classe SWEP), ex: weapon_pistol, weapon_crowbar...
+    giveitem = function(_, t, _, txt)
+        txt = string.Trim(txt or "")
+        if txt == "" then return end
+        t:Give(txt)
+        t:SelectWeapon(txt)
+    end,
+    -- Donner de l'or (Covan) — ajoute au solde (setcovan, lui, fixe la valeur).
+    addcovan = function(_, t, n)
+        if BLOOD.AddCovan then BLOOD.AddCovan(t, math.Clamp(n, -1000000000, 1000000000)) end
+    end,
+    -- Changer le job (id envoyé en texte : sansfaction / humanite / monstre...).
+    setjob = function(_, t, _, txt)
+        txt = string.Trim(txt or "")
+        if SJOB and SJOB.SetJob and SJOB.JobExists and SJOB.JobExists(txt) then
+            SJOB.SetJob(t, txt, true)
+        end
+    end,
+    -- Invisible (cloak) : rend le joueur transparent (toggle).
+    cloak = function(_, t)
+        t.SangCloaked = not t.SangCloaked
+        if t.SangCloaked then
+            t:SetRenderMode(RENDERMODE_TRANSALPHA)
+            t:SetColor(Color(255, 255, 255, 0))
+            t:DrawShadow(false)
+        else
+            t:SetRenderMode(RENDERMODE_NORMAL)
+            t:SetColor(Color(255, 255, 255, 255))
+            t:DrawShadow(true)
+        end
+    end,
+
     kick = function(_, t, _, txt)
         t:Kick(txt ~= "" and txt or "Expulsé par un membre du staff")
     end,
