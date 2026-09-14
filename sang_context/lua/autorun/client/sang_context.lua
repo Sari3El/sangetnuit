@@ -91,12 +91,16 @@ local function promptDrop()
 end
 
 local function promptTicket()
-    Derma_StringRequest("Faire un ticket",
-        "Décris ton problème (le staff en ligne sera prévenu) :", "", function(txt)
-        txt = string.Trim(txt or "")
-        if txt == "" then return end
-        net.Start("sang_ctx_ticket") net.WriteString(txt) net.SendToServer()
-    end)
+    -- Système de tickets complet (addon sang_tickets) : page raison/cible/desc.
+    if SANGTICKET and SANGTICKET.OpenCreate then
+        SANGTICKET.OpenCreate()
+    else
+        Derma_Message("Le système de tickets n'est pas chargé.", "Ticket", "OK")
+    end
+end
+
+local function openTicketBoard()
+    if SANGTICKET and SANGTICKET.OpenBoard then SANGTICKET.OpenBoard() end
 end
 
 -- Règles : à personnaliser librement.
@@ -134,6 +138,7 @@ local BUTTONS = {
     { l = "Vue 1ère / 3ème personne", fn = toggleThirdPerson },
     { l = "Couper les sons",          fn = function() RunConsoleCommand("stopsound") end },
     { l = "Faire un ticket",          fn = promptTicket },
+    { l = "Tickets (staff)",          fn = openTicketBoard, staff = true },
     { l = "Règles & aide",            fn = openRules },
 }
 
@@ -168,14 +173,17 @@ local function buildRightMenu(parent)
         draw.SimpleText("Sang et Nuit", "SangUI_Tiny", pw / 2, ph - S(14), C.txtDim, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
     end
 
+    local staff = LocalPlayer():IsAdmin()
     local y = titleH + pad
     for _, b in ipairs(BUTTONS) do
-        local btn = vgui.Create("DButton", pnl)
-        btn:SetText(b.l) btn:SetFont("SangUI_Body")
-        btn:SetPos(pad, y) btn:SetSize(w - pad * 2, bh)
-        UI.SkinButton(btn, "default")
-        btn.DoClick = function() b.fn() end
-        y = y + bh + gap
+        if not (b.staff and not staff) then -- boutons « staff » cachés aux joueurs
+            local btn = vgui.Create("DButton", pnl)
+            btn:SetText(b.l) btn:SetFont("SangUI_Body")
+            btn:SetPos(pad, y) btn:SetSize(w - pad * 2, bh)
+            UI.SkinButton(btn, "default")
+            btn.DoClick = function() b.fn() end
+            y = y + bh + gap
+        end
     end
     return pnl
 end

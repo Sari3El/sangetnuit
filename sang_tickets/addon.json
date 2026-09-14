@@ -1,0 +1,6 @@
+{
+    "title": "Sang et Nuit — Système de tickets",
+    "type": "servercontent",
+    "tags": ["roleplay", "build"],
+    "ignore": ["*.md", "*.txt", ".git/*", ".gitignore"]
+}

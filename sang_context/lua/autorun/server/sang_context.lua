@@ -8,11 +8,9 @@
 if not SERVER then return end
 
 util.AddNetworkString("sang_ctx_drop")
-util.AddNetworkString("sang_ctx_ticket")
 
 local DROP_MIN   = 1
 local DROP_CD    = 1       -- secondes entre deux drops
-local TICKET_CD  = 20      -- secondes entre deux tickets
 
 ----------------------------------------------------------------------
 -- Jeter des Covan -> sac ramassable
@@ -45,25 +43,4 @@ net.Receive("sang_ctx_drop", function(_, ply)
     if BLOOD.Notify then BLOOD.Notify(ply, "Tu as jeté " .. amount .. " Covan.", "info") end
 end)
 
-----------------------------------------------------------------------
--- Faire un ticket (v1 : notifie les admins en ligne + log)
-----------------------------------------------------------------------
-net.Receive("sang_ctx_ticket", function(_, ply)
-    if not IsValid(ply) then return end
-    if (ply.SangTicketCD or 0) > CurTime() then return end
-    local msg = string.Trim(string.sub(net.ReadString() or "", 1, 300))
-    if msg == "" then return end
-    ply.SangTicketCD = CurTime() + TICKET_CD
-
-    -- Ticket -> tchat des SUPER ADMINS uniquement (canal staff).
-    if BLOOD and BLOOD.StaffNotify then
-        BLOOD.StaffNotify("Ticket de " .. ply:Nick() .. " : " .. msg)
-    end
-    if BLOOD and BLOOD.LogAdmin then
-        BLOOD.LogAdmin("TICKET " .. ply:Nick() .. " (" .. ply:SteamID64() .. ") : " .. msg)
-    end
-    -- Confirmation au joueur : HUD (via Notify), pas dans le tchat.
-    if BLOOD and BLOOD.Notify then
-        BLOOD.Notify(ply, "Ton ticket a été envoyé au staff.", "info")
-    end
-end)
+-- (Les tickets sont désormais gérés par l'addon sang_tickets.)
