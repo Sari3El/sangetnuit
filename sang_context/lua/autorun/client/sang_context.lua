@@ -106,25 +106,28 @@ local BUTTONS = {
 
 local rightMenu
 
--- Dimensions : bandeau plein-hauteur sur toute la partie droite. Large assez
--- pour recouvrir le panneau d'options du toolgun.
+-- Dimensions : bandeau plein-hauteur sur toute la partie droite. Descendu sous
+-- la barre du haut du menu C, ne touche pas le bas. Large assez pour recouvrir
+-- le panneau d'options du toolgun. Renvoie x, y, w, h.
 local function menuGeom()
     local S = BLOOD.UI.Scale
     local w = math.Clamp(math.floor(ScrW() * 0.22), S(320), S(470))
-    local m = S(10)
-    return w, m, ScrH() - m * 2
+    local topM, botM = S(64), S(14)
+    return ScrW() - w - S(12), topM, w, ScrH() - topM - botM
 end
 
 local function buildRightMenu(parent)
     local UI, C, S = BLOOD.UI, BLOOD.UI.Col, BLOOD.UI.Scale
-    local w, m, h = menuGeom()
+    local x, y, w, h = menuGeom()
     local titleH, bh, gap, pad = S(50), S(46), S(12), S(18)
 
     local pnl = vgui.Create("DPanel", parent)
     pnl.SangMenu = true
     pnl:SetSize(w, h)
-    pnl:SetPos(ScrW() - w - m, m)
+    pnl:SetPos(x, y)
     pnl.Paint = function(_, pw, ph)
+        -- fond 100 % OPAQUE d'abord (sinon on voit à travers ce qu'il y a dessous)
+        surface.SetDrawColor(10, 8, 6, 255) surface.DrawRect(0, 0, pw, ph)
         UI.Panel(0, 0, pw, ph)
         UI.VGradient(S(3), S(3), pw - S(6), titleH, UI.Shade(C.bg3, 8), C.bg1)
         draw.SimpleText("MENU", "SangUI_Title", pw / 2, titleH / 2, C.goldLt, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
@@ -160,9 +163,9 @@ hook.Add("OnContextMenuOpen", "SangCtx_Menu", function()
     if not IsValid(cm) then return end
 
     if not IsValid(rightMenu) then rightMenu = buildRightMenu(cm) end
-    local w, m, h = menuGeom()
+    local x, y, w, h = menuGeom()
     rightMenu:SetSize(w, h)
-    rightMenu:SetPos(ScrW() - w - m, m)
+    rightMenu:SetPos(x, y)
     rightMenu:SetVisible(true)
     rightMenu:MoveToFront()
 
