@@ -106,21 +106,30 @@ local BUTTONS = {
 
 local rightMenu
 
+-- Dimensions : bandeau plein-hauteur sur toute la partie droite. Large assez
+-- pour recouvrir le panneau d'options du toolgun.
+local function menuGeom()
+    local S = BLOOD.UI.Scale
+    local w = math.Clamp(math.floor(ScrW() * 0.22), S(320), S(470))
+    local m = S(10)
+    return w, m, ScrH() - m * 2
+end
+
 local function buildRightMenu(parent)
     local UI, C, S = BLOOD.UI, BLOOD.UI.Col, BLOOD.UI.Scale
-    local w, bh, gap, pad, titleH = S(252), S(46), S(10), S(12), S(46)
-    local n = #BUTTONS
-    local h = titleH + pad + n * bh + (n - 1) * gap + pad
+    local w, m, h = menuGeom()
+    local titleH, bh, gap, pad = S(50), S(46), S(12), S(18)
 
     local pnl = vgui.Create("DPanel", parent)
     pnl.SangMenu = true
     pnl:SetSize(w, h)
-    pnl:SetPos(ScrW() - w - S(40), (ScrH() - h) / 2)
+    pnl:SetPos(ScrW() - w - m, m)
     pnl.Paint = function(_, pw, ph)
         UI.Panel(0, 0, pw, ph)
         UI.VGradient(S(3), S(3), pw - S(6), titleH, UI.Shade(C.bg3, 8), C.bg1)
         draw.SimpleText("MENU", "SangUI_Title", pw / 2, titleH / 2, C.goldLt, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-        surface.SetDrawColor(C.goldDk) surface.DrawRect(S(12), titleH, pw - S(24), 1)
+        surface.SetDrawColor(C.goldDk) surface.DrawRect(S(14), titleH, pw - S(28), 1)
+        draw.SimpleText("Sang et Nuit", "SangUI_Tiny", pw / 2, ph - S(14), C.txtDim, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
     end
 
     local y = titleH + pad
@@ -138,30 +147,43 @@ end
 ----------------------------------------------------------------------
 -- Ouverture / fermeture du menu contextuel (C)
 ----------------------------------------------------------------------
+-- Panneau d'options du toolgun (docké à droite dans le menu C) : on le masque
+-- tant que C est ouvert, et on le rétablit à la fermeture (pour ne pas casser
+-- son affichage dans le menu Q, qui utilise le même panneau).
+local function toolPanel()
+    return spawnmenu and spawnmenu.ActiveControlPanel and spawnmenu.ActiveControlPanel()
+end
+
 hook.Add("OnContextMenuOpen", "SangCtx_Menu", function()
     if not (BLOOD and BLOOD.UI) then return end
     local cm = g_ContextMenu
     if not IsValid(cm) then return end
 
     if not IsValid(rightMenu) then rightMenu = buildRightMenu(cm) end
-    rightMenu:SetPos(ScrW() - rightMenu:GetWide() - (BLOOD.UI.Scale(40)), (ScrH() - rightMenu:GetTall()) / 2)
+    local w, m, h = menuGeom()
+    rightMenu:SetSize(w, h)
+    rightMenu:SetPos(ScrW() - w - m, m)
     rightMenu:SetVisible(true)
     rightMenu:MoveToFront()
 
-    -- Icônes de gauche : masquées pour les non-super-admins. On le fait à la
-    -- frame suivante (après que les addons aient ajouté leurs boutons).
-    if not amISuper() then
-        timer.Simple(0, function()
-            if not IsValid(cm) then return end
+    timer.Simple(0, function()
+        if IsValid(rightMenu) then rightMenu:MoveToFront() end
+        -- masquer le panneau d'outil pour tout le monde
+        local cp = toolPanel()
+        if IsValid(cp) then cp:SetVisible(false) end
+        -- masquer les icônes de gauche pour les non-super-admins
+        if not amISuper() and IsValid(cm) then
             for _, ch in ipairs(cm:GetChildren()) do
                 if ch ~= rightMenu and not ch.SangMenu then ch:SetVisible(false) end
             end
-        end)
-    end
+        end
+    end)
 end)
 
 hook.Add("OnContextMenuClose", "SangCtx_Menu", function()
     if IsValid(rightMenu) then rightMenu:SetVisible(false) end
+    local cp = toolPanel()
+    if IsValid(cp) then cp:SetVisible(true) end -- rétabli pour le menu Q
 end)
 
 -- Bind console de secours pour basculer la vue (pratique en test).
