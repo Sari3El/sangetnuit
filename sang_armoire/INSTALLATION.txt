@@ -22,7 +22,19 @@ UTILISATION
 --------------------------------------------------------------------------
 - Faire apparaître une armoire :
     Menu Sandbox (Q) -> Entities -> "Sang et Nuit" -> "Armoire à PM (Sang et Nuit)".
-    (Modèle : controlroom_filecabinet001a. Elle reste figée là où tu la poses.)
+    Elle reste figée là où tu la poses.
+
+    Modèle : essaie controlroom_filecabinet001a, puis se replie automatiquement
+    sur d'autres meubles si celui-ci n'est pas dispo sur ton serveur (contenu
+    HL2 manquant), et en tout dernier recours sur le damier rose/noir
+    "models/error.mdl" — ce qui te dit clairement "aucun des modèles configurés
+    n'existe chez toi" plutôt que de rester invisible. Si tu vois ce damier ou
+    lis un message [Sang Armoire][ERREUR] en console serveur, mets ton PROPRE
+    modèle de meuble dans ArmoireModel (voir RÉGLAGES ci-dessous) : vise un
+    meuble qui s'affiche déjà chez toi et récupère son chemin exact soit par
+    clic droit > "Copier vers le presse-papiers" dans le menu spawn, soit en
+    visant le prop et en tapant en console :
+        lua_run print(LocalPlayer():GetEyeTrace().Entity:GetModel())
 
 - Vise l'armoire et fais [E] pour l'ouvrir. Le menu a deux colonnes :
 
@@ -42,7 +54,7 @@ UTILISATION
 --------------------------------------------------------------------------
 RÉGLAGES  (lua/sang_armoire/sh_config.lua)
 --------------------------------------------------------------------------
-   ArmoireModel, OpenDist, OpenSound.
+   ArmoireModel, ArmoireModelFallbacks, OpenDist, OpenSound.
    PMClasses       : classes d'arme éditables/équipables via l'armoire.
    JobWeapons      : PM disponibles pour un job précis (id sang_jobs).
    FactionWeapons  : PM disponibles par défaut pour une faction entière

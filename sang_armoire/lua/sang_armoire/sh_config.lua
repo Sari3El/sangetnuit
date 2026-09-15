@@ -14,9 +14,40 @@ SARM = SARM or {}
 SARM.Config = SARM.Config or {}
 local C = SARM.Config
 
+-- Modèle demandé en premier, puis repli automatique sur le suivant si le
+-- précédent n'est pas un prop valide SUR CE SERVEUR (contenu non monté,
+-- faute de frappe...). En tout dernier recours : models/error.mdl (damier
+-- rose/noir) — moche mais AU MOINS visible et cliquable, pour distinguer
+-- "modèle introuvable" d'un vrai bug de code.
 C.ArmoireModel = "models/props_wasteland/controlroom_filecabinet001a.mdl"
-C.OpenDist     = 140 -- portée (unités) pour ouvrir / utiliser l'armoire
-C.OpenSound    = "items/ammocrate_open.wav"
+C.ArmoireModelFallbacks = {
+    "models/props_c17/FurnitureCabinet001a.mdl",
+    "models/props_c17/FurnitureShelf001a.mdl",
+    "models/props_junk/wood_crate001a.mdl",
+}
+C.OpenDist  = 140 -- portée (unités) pour ouvrir / utiliser l'armoire
+C.OpenSound = "items/ammocrate_open.wav"
+
+--- Renvoie le premier modèle valide de la liste ci-dessus (ou models/error.mdl
+--  si aucun ne l'est), avec un avertissement console dans ce dernier cas.
+function SARM.ResolveModel()
+    local candidates = { C.ArmoireModel }
+    for _, m in ipairs(C.ArmoireModelFallbacks or {}) do candidates[#candidates + 1] = m end
+
+    for _, m in ipairs(candidates) do
+        if m and m ~= "" and util.IsValidModel(m) and util.IsValidProp(m) then
+            return m
+        end
+    end
+
+    MsgN("[Sang Armoire][ERREUR] Aucun modèle valide parmi : " .. table.concat(candidates, ", "))
+    MsgN("[Sang Armoire][ERREUR] -> contenu HL2 manquant sur ce serveur, ou faute de frappe dans SARM.Config.ArmoireModel.")
+    MsgN("[Sang Armoire][ERREUR] -> Repli sur models/error.mdl (damier rose/noir). Pour corriger : vise un meuble "
+        .. "qui s'affiche déjà chez toi (Q > Entités/Props), clic droit dessus > 'Copier vers le presse-papiers' "
+        .. "(ou la commande console 'lua_run print(LocalPlayer():GetEyeTrace().Entity:GetModel())' en visant le prop), "
+        .. "puis colle ce chemin dans SARM.Config.ArmoireModel.")
+    return "models/error.mdl"
+end
 
 ----------------------------------------------------------------------
 -- PM reconnus par l'armoire (whitelist des classes d'arme éditables).
