@@ -1,0 +1,51 @@
+==========================================================================
+  SANG ET NUIT — MISSIVES (addon séparé)
+==========================================================================
+
+Addon INDÉPENDANT. Il DÉPEND de "sang_et_nuit" (thème des menus, slots de
+personnage) et de "sang_jobs" (liste des factions : Empire / Créatures de
+la Nuit / Consortium). Installe les trois côte à côte dans addons/.
+
+--------------------------------------------------------------------------
+INSTALLATION
+--------------------------------------------------------------------------
+Copie le dossier "sang_missives" dans :
+   ...\GarrysMod\garrysmod\addons\
+
+Côte à côte avec les autres :
+   ...\addons\sang_et_nuit\
+   ...\addons\sang_jobs\
+   ...\addons\sang_missives\
+
+--------------------------------------------------------------------------
+UTILISATION
+--------------------------------------------------------------------------
+- Faire apparaître un bureau des missives :
+    Menu Sandbox (Q) -> Entities -> "Sang et Nuit" -> "Bureau des Missives".
+    (Modèle placeholder ; reste figé là où tu le poses.)
+
+- Vise le bureau et fais [E] pour ouvrir le menu. Trois options :
+    * Missive Personnelle   -> adressée à un joueur CONNECTÉ, choisi dans
+                                une liste.
+    * Missive de Faction    -> adressée à tous les membres de TA faction.
+                                Nécessite d'appartenir à une faction
+                                (Empire / Créatures de la Nuit / Consortium).
+    * Missive Inter-Faction -> adressée à une AUTRE faction que la tienne.
+                                Même condition d'appartenance.
+
+  Chaque option ouvre une fenêtre de rédaction (objet + texte, avec compteur
+  de caractères) puis envoie la missive au clic sur "Envoyer".
+
+- « Ma boîte aux lettres » (bouton en bas du menu) : liste les missives
+  reçues par le PERSONNAGE actif (personnelles + celles de sa faction),
+  avec un badge du nombre de non-lues. Clique une missive pour la lire.
+
+- Livraison : si le(s) destinataire(s) sont connectés, ils reçoivent une
+  notification immédiate. Sinon, la missive reste en attente et apparaît
+  dans leur boîte de réception à la prochaine ouverture.
+
+--------------------------------------------------------------------------
+RÉGLAGES  (lua/sang_missive/sh_config.lua)
+--------------------------------------------------------------------------
+   Model, OpenDist, SubjectMax, BodyMax, SendCooldown, InboxLimit.
+==========================================================================
