@@ -1,11 +1,12 @@
 --[[-------------------------------------------------------------------------
-    Sang et Nuit — Armoire à PM : net strings
+    Sang et Nuit — Armoire à PM (playermodel) : net strings
 ---------------------------------------------------------------------------]]
 
 if SERVER then
     util.AddNetworkString("sang_armoire_open")      -- S->C : ouvre le menu
-    util.AddNetworkString("sang_armoire_equip")     -- C->S : équiper un PM
+    util.AddNetworkString("sang_armoire_setmodel")  -- C->S : équiper un playermodel
     util.AddNetworkString("sang_armoire_bodygroup") -- C->S : régler un bodygroup
+    util.AddNetworkString("sang_armoire_skin")      -- C->S : régler le skin
 
     -- Anti-abus réseau générique (même logique que BLOOD.NetReceive du coeur ;
     -- dupliqué ici car sang_armoire se charge indépendamment). La fenêtre

@@ -1,9 +1,9 @@
 --[[-------------------------------------------------------------------------
-    Sang et Nuit — Armoire à PM : logique serveur
-      Tout est re-vérifié ici : la liste des PM autorisés vient de la
-      config (par job/faction), la portée est revérifiée à chaque action,
-      et les bodygroups sont bornés à ce que le modèle de l'arme accepte
-      réellement (GetBodygroupCount).
+    Sang et Nuit — Armoire à PM (playermodel) : logique serveur
+      Tout est re-vérifié ici : la liste des playermodels autorisés vient de
+      la config (par job/faction), la portée est revérifiée à chaque action,
+      et les bodygroups/skin sont bornés à ce que le modèle accepte
+      réellement (GetBodygroupCount / SkinCount).
 ---------------------------------------------------------------------------]]
 
 SARM = SARM or {}
@@ -13,15 +13,10 @@ local function notify(ply, msg, kind)
     if BLOOD and BLOOD.Notify then BLOOD.Notify(ply, msg, kind) else ply:ChatPrint("[Armoire] " .. msg) end
 end
 
---- Applique au PM `wep` de `ply` les bodygroups sauvegardés pour cette classe.
-local function reapplySaved(ply, wep)
-    if not IsValid(wep) or not wep.GetNumBodyGroups then return end
-    local saved = SARM.SQL.Get(ply:SteamID64(), wep:GetClass())
-    for bgid, value in pairs(saved) do
-        if bgid < wep:GetNumBodyGroups() and value < wep:GetBodygroupCount(bgid) then
-            wep:SetBodygroup(bgid, value)
-        end
-    end
+-- Le playermodel appartient AU PERSONNAGE (comme la race), pas juste au
+-- joueur : on suit le slot actif du coeur (sang_et_nuit), comme sang_jobs.
+local function activeSlot(ply)
+    return ply.BloodActiveSlot or 1
 end
 
 --- Ouvre l'armoire pour `activator` (appelé depuis ENT:Use).
@@ -42,68 +37,83 @@ local function nearArmoire(ply)
     return ply:GetPos():Distance(ent:GetPos()) <= (C.OpenDist + 40)
 end
 
---- Retire tous les PM actuellement portés par le joueur (whitelist SARM.IsPM).
-local function stripPMs(ply)
-    for _, w in ipairs(ply:GetWeapons()) do
-        if IsValid(w) and SARM.IsPM(w:GetClass()) then
-            ply:StripWeapon(w:GetClass())
-        end
-    end
-end
-
 ----------------------------------------------------------------------
--- Équiper un PM de la liste autorisée pour le job/faction du joueur.
+-- Équiper un playermodel de la liste autorisée pour le job/faction.
 ----------------------------------------------------------------------
-SARM.NetReceive("sang_armoire_equip", 0.5, function(_, ply)
-    local class = net.ReadString()
+SARM.NetReceive("sang_armoire_setmodel", 0.5, function(_, ply)
+    local model = net.ReadString()
     if not nearArmoire(ply) or not ply:Alive() then return end
 
-    local allowed = SARM.GetAvailableWeapons(ply)
+    local allowed = SARM.GetAvailableModels(ply)
     local ok = false
-    for _, w in ipairs(allowed) do
-        if w.class == class then ok = true break end
+    for _, m in ipairs(allowed) do
+        if m.model == model then ok = true break end
     end
-    if not ok then
-        notify(ply, "Ce PM n'est pas disponible pour ton job.", "error")
+    if not ok or not util.IsValidModel(model) or not util.IsValidProp(model) then
+        notify(ply, "Ce playermodel n'est pas disponible.", "error")
         return
     end
 
-    if IsValid(ply:GetWeapon(class)) then
-        ply:SelectWeapon(class)
-        return
-    end
+    ply:SetModel(model)
+    ply:SetSkin(0)
 
-    stripPMs(ply)
-    ply:Give(class)
-    ply:SelectWeapon(class)
-    reapplySaved(ply, ply:GetWeapon(class))
+    local sid, slot = ply:SteamID64(), activeSlot(ply)
+    SARM.SQL.SetModel(sid, slot, model, 0)
+    SARM.SQL.ClearBodygroups(sid, slot) -- les anciens indices n'ont plus de sens sur ce modèle
 
-    notify(ply, "PM équipé.", "info")
+    notify(ply, "Apparence changée.", "info")
 end)
 
 ----------------------------------------------------------------------
--- Modifier un bodygroup du PM actuellement porté.
+-- Modifier un bodygroup du playermodel actuellement porté.
 ----------------------------------------------------------------------
 SARM.NetReceive("sang_armoire_bodygroup", 0.1, function(_, ply)
     local bgid  = net.ReadUInt(8)
     local value = net.ReadUInt(8)
     if not nearArmoire(ply) then return end
+    if bgid >= ply:GetNumBodyGroups() then return end
+    if value >= ply:GetBodygroupCount(bgid) then return end
 
-    local wep = ply:GetActiveWeapon()
-    if not IsValid(wep) or not SARM.IsPM(wep:GetClass()) or not wep.GetNumBodyGroups then return end
-    if bgid >= wep:GetNumBodyGroups() then return end
-    if value >= wep:GetBodygroupCount(bgid) then return end
-
-    wep:SetBodygroup(bgid, value)
-    SARM.SQL.Set(ply:SteamID64(), wep:GetClass(), bgid, value)
+    ply:SetBodygroup(bgid, value)
+    SARM.SQL.SetBodygroup(ply:SteamID64(), activeSlot(ply), bgid, value)
 end)
 
 ----------------------------------------------------------------------
--- Réapplique les bodygroups enregistrés quand un PM est (ré)équipé
--- par un autre biais (respawn, ramassage au sol...).
+-- Modifier le skin du playermodel actuellement porté.
 ----------------------------------------------------------------------
-hook.Add("WeaponEquip", "SARM_ReapplyBodygroups", function(wep, ply)
-    if not IsValid(wep) or not IsValid(ply) or not ply:IsPlayer() then return end
-    if not SARM.IsPM(wep:GetClass()) then return end
-    reapplySaved(ply, wep)
+SARM.NetReceive("sang_armoire_skin", 0.1, function(_, ply)
+    local skin = net.ReadUInt(8)
+    if not nearArmoire(ply) then return end
+    if skin >= ply:SkinCount() then return end
+
+    ply:SetSkin(skin)
+    SARM.SQL.SetSkin(ply:SteamID64(), activeSlot(ply), skin)
+end)
+
+----------------------------------------------------------------------
+-- Réapplique le playermodel / skin / bodygroups sauvegardés au spawn.
+-- Délai calé juste après celui du coeur (BLOOD.Config.ApplyDelay), pour
+-- laisser le gamemode ET le coeur finir leur propre code de spawn avant
+-- qu'on écrase le modèle.
+----------------------------------------------------------------------
+hook.Add("PlayerSpawn", "SARM_ReapplyPlayermodel", function(ply)
+    local delay = ((BLOOD and BLOOD.Config and BLOOD.Config.ApplyDelay) or 0.15) + 0.1
+    timer.Simple(delay, function()
+        if not (IsValid(ply) and ply:Alive()) then return end
+
+        local sid, slot = ply:SteamID64(), activeSlot(ply)
+        local model, skin = SARM.SQL.GetModel(sid, slot)
+        if not model or model == "" then return end -- rien de choisi : on laisse le modèle par défaut
+        if not util.IsValidModel(model) or not util.IsValidProp(model) then return end
+
+        ply:SetModel(model)
+        ply:SetSkin(skin or 0)
+
+        local saved = SARM.SQL.GetBodygroups(sid, slot)
+        for bgid, value in pairs(saved) do
+            if bgid < ply:GetNumBodyGroups() and value < ply:GetBodygroupCount(bgid) then
+                ply:SetBodygroup(bgid, value)
+            end
+        end
+    end)
 end)

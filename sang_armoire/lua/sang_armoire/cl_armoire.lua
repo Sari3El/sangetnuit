@@ -1,9 +1,9 @@
 --[[-------------------------------------------------------------------------
-    Sang et Nuit — Armoire à PM : menu joueur (client)
-      Colonne gauche  : bodygroups du PM porté actuellement — générique,
-                        lus directement sur le modèle de l'arme active.
-      Colonne droite  : PM disponibles pour le job (ou la faction) du
-                        joueur, avec bouton "Équiper".
+    Sang et Nuit — Armoire à PM (playermodel) : menu joueur (client)
+      Colonne gauche  : skin + bodygroups du playermodel actuel — générique,
+                        lus directement sur le modèle du joueur.
+      Colonne droite  : playermodels disponibles pour le job (ou la faction)
+                        du joueur, avec bouton "Équiper".
       Style commun BLOOD.UI (addon principal requis).
 ---------------------------------------------------------------------------]]
 
@@ -14,7 +14,7 @@ surface.CreateFont("SangArmoire_Hint", { font = "Georgia", size = 20, weight = 7
 local function uiReady() return BLOOD and BLOOD.UI end
 
 ----------------------------------------------------------------------
--- Colonne gauche : bodygroups du PM porté
+-- Colonne gauche : skin + bodygroups du playermodel porté
 ----------------------------------------------------------------------
 local function buildLeft(panel, UI, C)
     local S = UI.Scale
@@ -25,29 +25,72 @@ local function buildLeft(panel, UI, C)
         local title = vgui.Create("DLabel", panel)
         title:Dock(TOP) title:DockMargin(0, 0, 0, S(8)) title:SetTall(S(22))
         title:SetFont("SangUI_Body") title:SetTextColor(C.txt)
-        title:SetText("Apparence du PM porté")
+        title:SetText("Apparence de ton personnage")
 
         local ply = LocalPlayer()
-        local wep = IsValid(ply) and ply:GetActiveWeapon() or nil
+        if not IsValid(ply) then return end
 
-        if not IsValid(wep) or not SARM.IsPM(wep:GetClass()) or not wep.GetNumBodyGroups then
-            local lbl = vgui.Create("DLabel", panel)
-            lbl:Dock(TOP) lbl:SetTall(S(44))
-            lbl:SetFont("SangUI_Small") lbl:SetTextColor(C.txtDim)
-            lbl:SetWrap(true)
-            lbl:SetText("Équipe un PM (colonne de droite) pour modifier son apparence.")
-            return
-        end
-
-        local wepClass = wep:GetClass()
         local any = false
 
-        for id = 0, wep:GetNumBodyGroups() - 1 do
-            local count = wep:GetBodygroupCount(id)
+        -- Skin (variante de texture globale, très courant sur les playermodels)
+        if ply:SkinCount() > 1 then
+            any = true
+            local count = ply:SkinCount()
+            local row = vgui.Create("DPanel", panel)
+            row:Dock(TOP) row:DockMargin(0, 0, 0, S(6)) row:SetTall(S(34))
+            row.Paint = function(_, w, h)
+                UI.VGradient(0, 0, w, h, UI.Shade(C.bg2, 4), C.bg1)
+                surface.SetDrawColor(C.goldDk)
+                surface.DrawOutlinedRect(0, 0, w, h, 1)
+            end
+
+            local lbl = vgui.Create("DLabel", row)
+            lbl:SetPos(S(10), 0) lbl:SetSize(S(128), S(34))
+            lbl:SetFont("SangUI_Small") lbl:SetTextColor(C.txt)
+            lbl:SetText("Teinte")
+
+            local prev = vgui.Create("DButton", row)
+            prev:SetSize(S(26), S(24)) prev:SetPos(S(146), S(5))
+            prev:SetText("<")
+            UI.SkinButton(prev, "default")
+
+            local valLbl = vgui.Create("DLabel", row)
+            valLbl:SetPos(S(178), 0) valLbl:SetSize(S(56), S(34))
+            valLbl:SetFont("SangUI_Small") valLbl:SetTextColor(C.goldLt)
+            valLbl:SetContentAlignment(5)
+
+            local nxt = vgui.Create("DButton", row)
+            nxt:SetSize(S(26), S(24)) nxt:SetPos(S(238), S(5))
+            nxt:SetText(">")
+            UI.SkinButton(nxt, "default")
+
+            local function send(v)
+                net.Start("sang_armoire_skin")
+                    net.WriteUInt(v, 8)
+                net.SendToServer()
+                surface.PlaySound("ui/buttonclick.wav")
+            end
+
+            prev.DoClick = function()
+                local p2 = LocalPlayer()
+                send((p2:GetSkin() - 1 + count) % count)
+            end
+            nxt.DoClick = function()
+                local p2 = LocalPlayer()
+                send((p2:GetSkin() + 1) % count)
+            end
+            row.Think = function()
+                valLbl:SetText((LocalPlayer():GetSkin() + 1) .. " / " .. count)
+            end
+        end
+
+        -- Bodygroups
+        for id = 0, ply:GetNumBodyGroups() - 1 do
+            local count = ply:GetBodygroupCount(id)
             if count > 1 then
                 any = true
 
-                local name = wep:GetBodygroupName(id)
+                local name = ply:GetBodygroupName(id)
                 if not name or name == "" then name = "Groupe " .. id end
 
                 local row = vgui.Create("DPanel", panel)
@@ -87,22 +130,17 @@ local function buildLeft(panel, UI, C)
                 end
 
                 prev.DoClick = function()
-                    local w2 = LocalPlayer():GetActiveWeapon()
-                    if not IsValid(w2) or w2:GetClass() ~= wepClass then return end
-                    local cnt = w2:GetBodygroupCount(id)
-                    send((w2:GetBodygroup(id) - 1 + cnt) % cnt)
+                    local p2 = LocalPlayer()
+                    local cnt = p2:GetBodygroupCount(id)
+                    send((p2:GetBodygroup(id) - 1 + cnt) % cnt)
                 end
                 nxt.DoClick = function()
-                    local w2 = LocalPlayer():GetActiveWeapon()
-                    if not IsValid(w2) or w2:GetClass() ~= wepClass then return end
-                    local cnt = w2:GetBodygroupCount(id)
-                    send((w2:GetBodygroup(id) + 1) % cnt)
+                    local p2 = LocalPlayer()
+                    local cnt = p2:GetBodygroupCount(id)
+                    send((p2:GetBodygroup(id) + 1) % cnt)
                 end
-
                 row.Think = function()
-                    local w2 = LocalPlayer():GetActiveWeapon()
-                    if not IsValid(w2) or w2:GetClass() ~= wepClass then return end
-                    valLbl:SetText((w2:GetBodygroup(id) + 1) .. " / " .. count)
+                    valLbl:SetText((LocalPlayer():GetBodygroup(id) + 1) .. " / " .. count)
                 end
             end
         end
@@ -112,29 +150,26 @@ local function buildLeft(panel, UI, C)
             lbl:Dock(TOP) lbl:SetTall(S(40))
             lbl:SetFont("SangUI_Small") lbl:SetTextColor(C.txtDim)
             lbl:SetWrap(true)
-            lbl:SetText("Ce PM n'a pas d'apparence personnalisable.")
+            lbl:SetText("Ce playermodel n'a pas d'apparence personnalisable.")
         end
     end
 
     rebuild()
 
     local ply = LocalPlayer()
-    local startWep = IsValid(ply) and ply:GetActiveWeapon() or nil
-    panel.LastWepClass = IsValid(startWep) and startWep:GetClass() or nil
-
+    panel.LastModel = IsValid(ply) and ply:GetModel() or nil
     panel.Think = function()
         local p = LocalPlayer()
-        local wep = IsValid(p) and p:GetActiveWeapon() or nil
-        local class = IsValid(wep) and wep:GetClass() or nil
-        if class ~= panel.LastWepClass then
-            panel.LastWepClass = class
+        local model = IsValid(p) and p:GetModel() or nil
+        if model ~= panel.LastModel then
+            panel.LastModel = model
             rebuild()
         end
     end
 end
 
 ----------------------------------------------------------------------
--- Colonne droite : PM disponibles pour le job / faction
+-- Colonne droite : playermodels disponibles pour le job / faction
 ----------------------------------------------------------------------
 local function buildRight(panel, UI, C)
     local S = UI.Scale
@@ -146,21 +181,21 @@ local function buildRight(panel, UI, C)
     local title = vgui.Create("DLabel", panel)
     title:Dock(TOP) title:DockMargin(0, 0, 0, S(8)) title:SetTall(S(22))
     title:SetFont("SangUI_Body") title:SetTextColor(C.txt)
-    title:SetText("PM disponibles — " .. facName)
+    title:SetText("Apparences disponibles — " .. facName)
 
-    local list = SARM.GetAvailableWeapons(ply)
+    local list = SARM.GetAvailableModels(ply)
 
     if #list == 0 then
         local lbl = vgui.Create("DLabel", panel)
         lbl:Dock(TOP) lbl:SetTall(S(40))
         lbl:SetFont("SangUI_Small") lbl:SetTextColor(C.txtDim)
         lbl:SetWrap(true)
-        lbl:SetText("Aucun PM n'est configuré pour ton job actuellement.")
+        lbl:SetText("Aucune apparence n'est configurée pour ton job actuellement.")
         return
     end
 
-    for _, w in ipairs(list) do
-        local class = w.class
+    for _, m in ipairs(list) do
+        local model = m.model
 
         local row = vgui.Create("DPanel", panel)
         row:Dock(TOP) row:DockMargin(0, 0, 0, S(8)) row:SetTall(S(44))
@@ -174,7 +209,7 @@ local function buildRight(panel, UI, C)
         lbl:SetPos(S(10), 0) lbl:SetSize(S(200), S(44))
         lbl:SetFont("SangUI_Body") lbl:SetTextColor(C.txt)
         lbl:SetContentAlignment(4)
-        lbl:SetText(w.name or class)
+        lbl:SetText(m.name or model)
 
         local btn = vgui.Create("DButton", row)
         btn:SetSize(S(110), S(30))
@@ -182,15 +217,15 @@ local function buildRight(panel, UI, C)
         local skinThink = btn.Think -- SkinButton pose déjà un Think (couleur du texte) : on le chaîne
         btn.Think = function(self)
             self:SetPos(row:GetWide() - S(120), S(7))
-            local cur = LocalPlayer():GetActiveWeapon()
-            local equipped = IsValid(cur) and cur:GetClass() == class
+            local p2 = LocalPlayer()
+            local equipped = IsValid(p2) and p2:GetModel() == model
             self:SetText(equipped and "Équipé" or "Équiper")
             self:SetEnabled(not equipped)
             if skinThink then skinThink(self) end
         end
         btn.DoClick = function()
-            net.Start("sang_armoire_equip")
-                net.WriteString(class)
+            net.Start("sang_armoire_setmodel")
+                net.WriteString(model)
             net.SendToServer()
             surface.PlaySound("ui/buttonclick.wav")
         end

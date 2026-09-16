@@ -1,10 +1,12 @@
 ==========================================================================
-  SANG ET NUIT — ARMOIRE À PM (addon séparé)
+  SANG ET NUIT — ARMOIRE À PM (playermodel) (addon séparé)
 ==========================================================================
 
-Addon INDÉPENDANT. Il DÉPEND de "sang_et_nuit" (thème des menus BLOOD.UI) et,
-pour afficher le job/faction du joueur, de "sang_jobs". Installe-les tous
-côte à côte dans addons/.
+Addon INDÉPENDANT. Il DÉPEND de "sang_et_nuit" (thème des menus BLOOD.UI +
+slots de personnage) et, pour afficher le job/faction du joueur, de
+"sang_jobs". Installe-les tous côte à côte dans addons/.
+
+PM = PLAYERMODEL (l'apparence du personnage), PAS une arme.
 
 --------------------------------------------------------------------------
 INSTALLATION
@@ -24,45 +26,52 @@ UTILISATION
     Menu Sandbox (Q) -> Entities -> "Sang et Nuit" -> "Armoire à PM (Sang et Nuit)".
     Elle reste figée là où tu la poses.
 
-    Modèle : essaie controlroom_filecabinet001a, puis se replie automatiquement
-    sur d'autres meubles si celui-ci n'est pas dispo sur ton serveur (contenu
-    HL2 manquant), et en tout dernier recours sur le damier rose/noir
-    "models/error.mdl" — ce qui te dit clairement "aucun des modèles configurés
-    n'existe chez toi" plutôt que de rester invisible. Si tu vois ce damier ou
-    lis un message [Sang Armoire][ERREUR] en console serveur, mets ton PROPRE
-    modèle de meuble dans ArmoireModel (voir RÉGLAGES ci-dessous) : vise un
-    meuble qui s'affiche déjà chez toi et récupère son chemin exact soit par
-    clic droit > "Copier vers le presse-papiers" dans le menu spawn, soit en
-    visant le prop et en tapant en console :
+    Modèle DU MEUBLE : essaie controlroom_filecabinet001a, puis se replie
+    automatiquement sur d'autres meubles si celui-ci n'est pas dispo sur ton
+    serveur (contenu HL2 manquant), et en tout dernier recours sur le damier
+    rose/noir "models/error.mdl" — ce qui te dit clairement "aucun des
+    modèles configurés n'existe chez toi" plutôt que de rester invisible. Si
+    tu vois ce damier ou lis un message [Sang Armoire][ERREUR] en console
+    serveur, mets ton PROPRE modèle de meuble dans ArmoireModel (voir
+    RÉGLAGES ci-dessous) : vise un meuble qui s'affiche déjà chez toi et
+    récupère son chemin exact soit par clic droit > "Copier vers le
+    presse-papiers" dans le menu spawn, soit en visant le prop et en tapant
+    en console :
         lua_run print(LocalPlayer():GetEyeTrace().Entity:GetModel())
 
 - Vise l'armoire et fais [E] pour l'ouvrir. Le menu a deux colonnes :
 
-    * Gauche  — « Apparence du PM porté » : la liste des bodygroups du PM
-      actuellement en main, avec des flèches < / > pour changer chaque
-      partie. C'est générique : ça lit les bodygroups RÉELS du modèle de
-      l'arme, rien à configurer. Si le PM n'a qu'un seul choix par groupe
-      (cas de weapon_smg1 de base), rien n'apparaît — normal, il faudra un
-      modèle de PM avec plusieurs sous-modèles pour en profiter.
-      Le choix est sauvegardé (par joueur + par classe d'arme) et réappliqué
-      automatiquement à chaque fois que ce PM est rééquipé.
+    * Gauche  — « Apparence de ton personnage » : teinte (skin, si le
+      playermodel en a plusieurs) + bodygroups, avec des flèches < / > pour
+      changer chaque partie. C'est générique : ça lit les bodygroups RÉELS
+      DE TON PLAYERMODEL ACTUEL, rien à configurer à la main.
+      Le choix est sauvegardé PAR PERSONNAGE (slot actif) et réappliqué
+      automatiquement à chaque spawn. Changer de playermodel (colonne de
+      droite) réinitialise les bodygroups (les anciens indices n'ont plus
+      de sens sur un autre modèle).
 
-    * Droite — « PM disponibles » : les PM que le job (ou, à défaut, la
-      faction) du joueur autorise, avec un bouton "Équiper". Équiper un PM
-      retire automatiquement celui déjà porté (un seul PM à la fois).
+    * Droite — « Apparences disponibles » : les playermodels que le job (ou,
+      à défaut, la faction) du joueur autorise, PLUS une liste toujours
+      proposée à tout le monde (GlobalModels — utile pour tester tout de
+      suite). Bouton "Équiper" pour changer de playermodel.
 
 --------------------------------------------------------------------------
 RÉGLAGES  (lua/sang_armoire/sh_config.lua)
 --------------------------------------------------------------------------
-   ArmoireModel, ArmoireModelFallbacks, OpenDist, OpenSound.
-   PMClasses       : classes d'arme éditables/équipables via l'armoire.
-   JobWeapons      : PM disponibles pour un job précis (id sang_jobs).
-   FactionWeapons  : PM disponibles par défaut pour une faction entière
-                     (utilisé si le job n'a pas d'entrée dans JobWeapons).
+   ArmoireModel, ArmoireModelFallbacks : modèle DU MEUBLE (voir plus haut).
+   OpenDist, OpenSound.
+   JobModels      : playermodels disponibles pour un job précis (id sang_jobs).
+   FactionModels  : playermodels disponibles par défaut pour une faction
+                    entière (utilisé si le job n'a pas d'entrée dans JobModels).
+   GlobalModels   : playermodels TOUJOURS proposés, en plus, quel que soit
+                    le job/faction (par défaut : Citoyen — models/Humans/
+                    Group1M/Male_05.mdl — juste pour avoir un choix testable
+                    tout de suite).
 
-Par défaut, seul weapon_smg1 (le PM de base HL2) est déclaré, pour Empire et
-Consortium. Ajoute tes propres SWEP de PM dans PMClasses puis dans
-JobWeapons/FactionWeapons au fur et à mesure que tu les crées — plus le
-modèle a de bodygroups (crosse, silencieux, lunette...), plus la colonne de
+Ajoute tes propres playermodels dans JobModels/FactionModels au fur et à
+mesure — n'importe quel .mdl de playermodel fonctionne (les modèles HL2 de
+base comme "models/Humans/Group1M/..." ou "models/police.mdl" marchent
+directement ; les modèles Workshop doivent juste être installés sur le
+serveur ET les clients). Plus le modèle a de bodygroups, plus la colonne de
 gauche aura de choix à proposer.
 ==========================================================================
