@@ -48,6 +48,16 @@ function SARM.ResolveModel()
     return "models/error.mdl"
 end
 
+--- Un chemin de PLAYERMODEL est-il utilisable sur ce serveur ?
+--  ATTENTION : util.IsValidProp() sert à valider des physics props
+--  (spawnables comme objets) — un playermodel légitime (rigged, sans
+--  collision "prop") y échoue quasi systématiquement. On vérifie donc
+--  juste que le chemin a une forme correcte ET que le fichier existe
+--  réellement dans le contenu monté (GAME = tous les .gma/.vpk montés).
+function SARM.IsValidPlayerModel(model)
+    return model ~= nil and model ~= "" and util.IsValidModel(model) and file.Exists(model, "GAME")
+end
+
 ----------------------------------------------------------------------
 -- Noms de faction (affichage uniquement — doit suivre sang_jobs).
 ----------------------------------------------------------------------
@@ -70,6 +80,13 @@ C.FactionNames = {
 --   liste de C.FactionModels[faction] qui sert.
 ----------------------------------------------------------------------
 C.JobModels = {
+    -- "sansfaction" = id du job "Sans Faction" dans sang_jobs (job de départ).
+    sansfaction = {
+        { model = "models/Humans/Group1M/Male_04.mdl", name = "Citoyen (Male 04)" },
+        { model = "models/Humans/Group1M/Male_05.mdl", name = "Citoyen (Male 05)" },
+        { model = "models/Humans/Group1M/male_06.mdl", name = "Citoyen (Male 06)" },
+        { model = "models/Humans/Group1M/male_07.mdl", name = "Citoyen (Male 07)" },
+    },
     -- ["empire_5"] = { { model = "models/Combine_Soldier.mdl", name = "Soldat" } },
 }
 
@@ -79,14 +96,13 @@ C.FactionModels = {
     -- consortium = { { model = "models/alyx.mdl", name = "Agent du Consortium" } },
 }
 
--- Toujours proposés, en plus de la liste job/faction (exemple de départ).
-C.GlobalModels = {
-    { model = "models/Humans/Group1M/Male_05.mdl", name = "Citoyen (Male 05)" },
-}
+-- Toujours proposés, en plus de la liste job/faction (vide par défaut :
+-- chaque job a désormais SES propres playermodels via JobModels/FactionModels).
+C.GlobalModels = {}
 
---- Liste des playermodels que CE joueur peut équiper (job, puis faction,
---  puis toujours GlobalModels en plus). Utilisable client ET serveur (ne
---  lit que des NWString déjà répliquées).
+--- Liste des playermodels que CE joueur peut équiper (job en priorité,
+--  sinon faction, plus GlobalModels en plus si non vide). Utilisable
+--  client ET serveur (ne lit que des NWString déjà répliquées).
 function SARM.GetAvailableModels(ply)
     if not IsValid(ply) then return {} end
     local out = {}

@@ -49,7 +49,7 @@ SARM.NetReceive("sang_armoire_setmodel", 0.5, function(_, ply)
     for _, m in ipairs(allowed) do
         if m.model == model then ok = true break end
     end
-    if not ok or not util.IsValidModel(model) or not util.IsValidProp(model) then
+    if not ok or not SARM.IsValidPlayerModel(model) then
         notify(ply, "Ce playermodel n'est pas disponible.", "error")
         return
     end
@@ -104,7 +104,7 @@ hook.Add("PlayerSpawn", "SARM_ReapplyPlayermodel", function(ply)
         local sid, slot = ply:SteamID64(), activeSlot(ply)
         local model, skin = SARM.SQL.GetModel(sid, slot)
         if not model or model == "" then return end -- rien de choisi : on laisse le modèle par défaut
-        if not util.IsValidModel(model) or not util.IsValidProp(model) then return end
+        if not SARM.IsValidPlayerModel(model) then return end
 
         ply:SetModel(model)
         ply:SetSkin(skin or 0)

@@ -50,23 +50,27 @@ UTILISATION
       droite) réinitialise les bodygroups (les anciens indices n'ont plus
       de sens sur un autre modèle).
 
-    * Droite — « Apparences disponibles » : les playermodels que le job (ou,
-      à défaut, la faction) du joueur autorise, PLUS une liste toujours
-      proposée à tout le monde (GlobalModels — utile pour tester tout de
-      suite). Bouton "Équiper" pour changer de playermodel.
+    * Droite — « Apparences disponibles » : les playermodels que le job du
+      joueur autorise (ou, à défaut, sa faction). CHAQUE JOB A SES PROPRES
+      PLAYERMODELS — par défaut, seul le job "Sans Faction" (id sansfaction,
+      le job de départ) a une liste : 4 citoyens (Male_04/05/06/07). Un
+      joueur d'un autre job verra "Aucune apparence n'est configurée pour
+      ton job actuellement." tant que tu n'as pas complété sa liste (voir
+      RÉGLAGES ci-dessous). Bouton "Équiper" pour changer de playermodel.
 
 --------------------------------------------------------------------------
 RÉGLAGES  (lua/sang_armoire/sh_config.lua)
 --------------------------------------------------------------------------
    ArmoireModel, ArmoireModelFallbacks : modèle DU MEUBLE (voir plus haut).
    OpenDist, OpenSound.
-   JobModels      : playermodels disponibles pour un job précis (id sang_jobs).
+   JobModels      : playermodels disponibles pour un job précis (id sang_jobs,
+                    ex. "sansfaction", "empire_5"...). PRIORITAIRE.
    FactionModels  : playermodels disponibles par défaut pour une faction
                     entière (utilisé si le job n'a pas d'entrée dans JobModels).
    GlobalModels   : playermodels TOUJOURS proposés, en plus, quel que soit
-                    le job/faction (par défaut : Citoyen — models/Humans/
-                    Group1M/Male_05.mdl — juste pour avoir un choix testable
-                    tout de suite).
+                    le job/faction — vide par défaut (chaque job doit avoir
+                    les siens), à utiliser seulement si tu veux un fond
+                    commun à tout le monde.
 
 Ajoute tes propres playermodels dans JobModels/FactionModels au fur et à
 mesure — n'importe quel .mdl de playermodel fonctionne (les modèles HL2 de
