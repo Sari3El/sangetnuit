@@ -1,0 +1,51 @@
+==========================================================================
+  SANG ET NUIT — ARMURERIE (addon séparé)
+==========================================================================
+
+Addon INDÉPENDANT. Il DÉPEND de "sang_et_nuit" (slots de personnage + thème
+des menus). Installe les deux côte à côte dans addons/.
+
+--------------------------------------------------------------------------
+INSTALLATION
+--------------------------------------------------------------------------
+Copie le dossier "sang_armurerie" dans :
+   ...\GarrysMod\garrysmod\addons\
+
+Côte à côte avec les autres :
+   ...\addons\sang_et_nuit\
+   ...\addons\sang_banque\
+   ...\addons\sang_armurerie\
+
+--------------------------------------------------------------------------
+UTILISATION
+--------------------------------------------------------------------------
+- Faire apparaître une armurerie :
+    Menu Sandbox (Q) -> Entities -> "Sang et Nuit" -> "Armurerie (Sang et Nuit)".
+    (Modèle : caisse en bois. Elle reste figée là où tu la poses.)
+
+- Ranger / récupérer :
+    Vise l'armurerie et fais [E] -> menu à deux colonnes :
+      * « Sur toi »       : tes armes actuelles, bouton Ranger sur chacune
+                             (+ « Tout ranger »).
+      * « Dans le coffre » : les armes stockées, bouton Récupérer sur chacune
+                             (+ « Tout récupérer »), avec leurs munitions
+                             en chargeur.
+
+- Stockage PAR PERSONNAGE :
+    Le coffre est propre à chaque slot de personnage (1 à 4). Un joueur qui
+    range une arme en jouant son slot 1 ne la retrouvera pas en jouant son
+    slot 2 — chaque personnage a son propre coffre.
+
+- Persistance :
+    100% SQL (SQLite), indépendant de la connexion du joueur : les armes
+    restent stockées même après déconnexion / redémarrage du serveur.
+
+--------------------------------------------------------------------------
+RÉGLAGES  (lua/sang_armory/sh_config.lua)
+--------------------------------------------------------------------------
+   ArmoryModel  : modèle de l'entité.
+   OpenDist     : portée pour ouvrir le menu.
+   MaxItems     : nombre max d'armes stockables par personnage (défaut 40).
+   Blacklist    : classes d'armes qui ne peuvent jamais être rangées
+                  (mains nues, outils sandbox...).
+==========================================================================

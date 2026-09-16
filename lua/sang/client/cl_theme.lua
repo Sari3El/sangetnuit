@@ -216,6 +216,22 @@ function UI.SkinCombo(combo)
 end
 
 ----------------------------------------------------------------------
+-- Skin d'un DScrollPanel (barre de défilement fine, dorée)
+----------------------------------------------------------------------
+function UI.SkinScroll(scroll)
+    local bar = scroll:GetVBar()
+    if not IsValid(bar) then return end
+    bar:SetWide(S(8))
+    bar.Paint = function(_, w, h) surface.SetDrawColor(C.ink) surface.DrawRect(0, 0, w, h) end
+    bar.btnUp.Paint = function() end
+    bar.btnDown.Paint = function() end
+    bar.btnGrip.Paint = function(self, w, h)
+        surface.SetDrawColor(self:IsHovered() and C.gold or C.goldDk)
+        surface.DrawRect(1, 0, w - 2, h)
+    end
+end
+
+----------------------------------------------------------------------
 -- Fenêtre stylée (DFrame) — renvoie la frame ; le contenu va dans f.Body
 ----------------------------------------------------------------------
 function UI.MakeFrame(w, h, title)
