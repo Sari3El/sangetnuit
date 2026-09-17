@@ -203,3 +203,14 @@ SMISSIVE.NetReceive("sang_missive_inbox_req", 0.5, function(_, ply)
     if maxId > cursor then SMISSIVE.SQL.SetCursor(sid, slot, maxId) end
     SMISSIVE.PushBadge(ply)
 end)
+
+----------------------------------------------------------------------
+-- Suppression d'une missive (de SA seule boîte — voir sv_sql.lua).
+----------------------------------------------------------------------
+SMISSIVE.NetReceive("sang_missive_dismiss", 0.2, function(_, ply)
+    if not (BLOOD and BLOOD.HasCharacter and BLOOD.HasCharacter(ply)) then return end
+    local id = net.ReadUInt(32)
+    local sid, slot = ply:SteamID64(), ply.BloodActiveSlot or 1
+    if not SMISSIVE.SQL.IsAddressedTo(id, sid, slot, inboxFaction(ply)) then return end
+    SMISSIVE.SQL.Dismiss(sid, slot, id)
+end)

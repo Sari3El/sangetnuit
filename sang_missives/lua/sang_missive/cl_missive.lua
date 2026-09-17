@@ -281,6 +281,11 @@ function SMISSIVE.OpenInbox()
     if IsValid(SMISSIVE.InboxFrame) then SMISSIVE.InboxFrame:Remove() end
     local f = UI.MakeFrame(S(760), S(560), "Ma boîte aux lettres")
     SMISSIVE.InboxFrame = f
+    f.OnClose = function()
+        if SMISSIVE.SetMouseFree then SMISSIVE.SetMouseFree(false) end
+        SMISSIVE.RefreshNotif()
+    end
+    SMISSIVE.RefreshNotif() -- cache la notification pendant la lecture
     local body = f.Body
 
     -- Colonne liste (gauche)
@@ -306,6 +311,41 @@ function SMISSIVE.OpenInbox()
     readerMeta:Dock(TOP) readerMeta:DockMargin(0, S(2), 0, S(10)) readerMeta:SetTall(S(20))
     readerMeta:SetFont("SangUI_Small") readerMeta:SetTextColor(C.txtDim)
 
+    local currentMissive = nil
+    local showMissive, clearReader -- déclarées avant deleteBtn (upvalues, assignées plus bas)
+
+    -- BOTTOM : bouton de suppression — créé (parenté) AVANT la zone de
+    -- lecture en FILL, pour que le dock lui réserve sa place (l'ordre de
+    -- création des enfants prime sur l'ordre des appels à :Dock()).
+    local deleteBtn = vgui.Create("DButton", reader)
+    deleteBtn:Dock(BOTTOM) deleteBtn:DockMargin(0, S(10), 0, 0) deleteBtn:SetTall(S(30))
+    deleteBtn:SetText("Supprimer cette missive")
+    UI.SkinButton(deleteBtn, "blood")
+    deleteBtn:SetEnabled(false)
+    deleteBtn.DoClick = function()
+        if not currentMissive then return end
+        local id = currentMissive.id
+
+        net.Start("sang_missive_dismiss")
+            net.WriteUInt(id, 32)
+        net.SendToServer()
+
+        for i, mm in ipairs(SMISSIVE.Inbox) do
+            if mm.id == id then
+                if IsValid(mm.rowPanel) then mm.rowPanel:Remove() end
+                table.remove(SMISSIVE.Inbox, i)
+                break
+            end
+        end
+
+        if #SMISSIVE.Inbox > 0 then
+            showMissive(SMISSIVE.Inbox[1])
+        else
+            clearReader()
+        end
+    end
+
+    -- FILL : zone de lecture — créée en dernier.
     local readerScroll = vgui.Create("DScrollPanel", reader)
     readerScroll:Dock(FILL)
     skinScroll(readerScroll)
@@ -316,7 +356,16 @@ function SMISSIVE.OpenInbox()
     readerBody:SetWrap(true) readerBody:SetAutoStretchVertical(true)
     readerBody:SetText("")
 
-    local function showMissive(m)
+    function clearReader()
+        currentMissive = nil
+        readerSubject:SetText("")
+        readerMeta:SetText("")
+        readerBody:SetText("")
+        deleteBtn:SetEnabled(false)
+    end
+
+    function showMissive(m)
+        currentMissive = m
         readerSubject:SetText(m.subject)
         local metaParts = { "De : " .. m.senderName, os.date("%d/%m/%Y %H:%M", m.ts) }
         if m.kind ~= "personal" then
@@ -324,18 +373,19 @@ function SMISSIVE.OpenInbox()
         end
         readerMeta:SetText(table.concat(metaParts, "   ·   "))
         readerBody:SetText(m.body)
+        deleteBtn:SetEnabled(true)
     end
 
     if #SMISSIVE.Inbox == 0 then
         local lbl = vgui.Create("DLabel", scroll)
         lbl:Dock(TOP) lbl:DockMargin(0, S(10), 0, 0) lbl:SetFont("SangUI_Small") lbl:SetTextColor(C.txtDim)
         lbl:SetText("Aucune missive reçue pour l'instant.")
-        readerSubject:SetText("")
-        readerMeta:SetText("")
+        clearReader()
     else
         for i, m in ipairs(SMISSIVE.Inbox) do
             local row = vgui.Create("DButton", scroll)
             row:Dock(TOP) row:DockMargin(0, 0, S(4), S(4)) row:SetTall(S(52)) row:SetText("")
+            m.rowPanel = row
             local fcol = m.kind == "personal" and C.goldDk or factionColor(m.targetFaction)
             row.Paint = function(self, w, h)
                 local hovered = self:IsHovered()
@@ -380,55 +430,99 @@ hook.Add("HUDPaint", "SANGMISSIVE_Hint", function()
 end)
 
 ----------------------------------------------------------------------
--- Badge HUD persistant : apparaît dès qu'une missive non lue est en
--- attente (reçue en temps réel ou déjà en attente à la connexion), où que
--- soit le joueur. Touche F3 pour ouvrir directement la boîte de réception
--- (la souris n'étant pas disponible en jeu, on ne peut pas "cliquer" un
--- élément de HUD à proprement parler : la touche fait office de clic).
+-- Notification persistante et CLIQUABLE : apparaît en haut à droite dès
+-- qu'une missive non lue est en attente (reçue en temps réel ou déjà en
+-- attente à la connexion), où que soit le joueur, et reste affichée tant
+-- qu'elle n'a pas été lue.
+--
+-- En jeu, la souris pilote la caméra : aucun élément d'écran ne peut être
+-- "cliqué" tant qu'elle n'a pas été libérée. La touche [F3] fait donc
+-- exactement ce que ferait GMod de base pour ça (gui.EnableScreenClicker,
+-- le même mécanisme que le viseur du scanner Combine) : elle libère/reprend
+-- la souris SANS ouvrir de menu. Une fois libérée, on clique la notification
+-- pour ouvrir la boîte de réception.
 ----------------------------------------------------------------------
 net.Receive("sang_missive_badge", function()
     SMISSIVE.UnreadCount = net.ReadUInt(16)
+    SMISSIVE.RefreshNotif()
 end)
 
-hook.Add("HUDPaint", "SANGMISSIVE_Badge", function()
-    local n = SMISSIVE.UnreadCount or 0
-    if n <= 0 or not uiReady() then return end
-    local ply = LocalPlayer()
-    if not IsValid(ply) or not ply:Alive() then return end
-
+function SMISSIVE.EnsureNotifPanel()
+    if IsValid(SMISSIVE.NotifPanel) then return SMISSIVE.NotifPanel end
+    if not uiReady() then return end
     local UI, C = BLOOD.UI, BLOOD.UI.Col
     local S = UI.Scale
+    local w, h = S(260), S(52)
 
-    local w, h = S(240), S(50)
-    local x, y = ScrW() - w - S(24), S(24)
+    local pnl = vgui.Create("DButton")
+    pnl:SetSize(w, h)
+    pnl:SetPos(ScrW() - w - S(24), S(24))
+    pnl:SetText("")
+    pnl:SetMouseInputEnabled(true)
+    pnl:SetKeyboardInputEnabled(false)
+    pnl:SetVisible(false)
 
-    -- Léger effet de pulsation pour attirer l'œil sans être criard.
-    local pulse = 0.5 + 0.5 * math.sin(CurTime() * 3)
+    pnl.Paint = function(self, pw, ph)
+        local hovered = self:IsHovered()
+        UI.VGradient(0, 0, pw, ph, UI.Shade(C.bg2, hovered and 16 or 6), C.bg0)
+        surface.SetDrawColor(C.ink); surface.DrawOutlinedRect(0, 0, pw, ph, 1)
+        if hovered then
+            surface.SetDrawColor(C.goldLt)
+        else
+            local pulse = 0.5 + 0.5 * math.sin(CurTime() * 3)
+            surface.SetDrawColor(Lerp(pulse, C.goldDk.r, C.goldLt.r), Lerp(pulse, C.goldDk.g, C.goldLt.g), Lerp(pulse, C.goldDk.b, C.goldLt.b))
+        end
+        surface.DrawOutlinedRect(1, 1, pw - 2, ph - 2, 1)
+        surface.SetDrawColor(C.blood); surface.DrawRect(0, 0, S(3), ph)
 
-    UI.VGradient(x, y, w, h, UI.Shade(C.bg2, 6), C.bg0)
-    surface.SetDrawColor(C.ink); surface.DrawOutlinedRect(x, y, w, h, 1)
-    surface.SetDrawColor(Lerp(pulse, C.goldDk.r, C.goldLt.r), Lerp(pulse, C.goldDk.g, C.goldLt.g), Lerp(pulse, C.goldDk.b, C.goldLt.b))
-    surface.DrawOutlinedRect(x + 1, y + 1, w - 2, h - 2, 1)
-    surface.SetDrawColor(C.blood); surface.DrawRect(x, y, S(3), h)
+        local n = SMISSIVE.UnreadCount or 0
+        local label = n .. " missive" .. (n > 1 and "s" or "") .. " non lue" .. (n > 1 and "s" or "")
+        draw.SimpleText(label, "SangMissive_BadgeTitle", S(14), S(14), C.goldLt, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        local hintTxt = vgui.CursorVisible() and "Clique pour lire" or "Appuie sur [F3] puis clique"
+        draw.SimpleText(hintTxt, "SangMissive_BadgeHint", S(14), S(37), C.txtDim, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+    end
 
-    local label = n .. " missive" .. (n > 1 and "s" or "") .. " non lue" .. (n > 1 and "s" or "")
-    draw.SimpleText(label, "SangMissive_BadgeTitle", x + S(14), y + S(13), C.goldLt, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-    draw.SimpleText("Appuie sur [F3] pour lire", "SangMissive_BadgeHint", x + S(14), y + S(35), C.txtDim, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-end)
+    pnl.DoClick = function() SMISSIVE.RequestInbox() end
+
+    SMISSIVE.NotifPanel = pnl
+    return pnl
+end
+
+-- Montre/cache la notification selon le nombre de non-lues (et la cache
+-- pendant que la boîte de réception est déjà ouverte, pour ne pas se
+-- superposer avec la fenêtre de lecture).
+function SMISSIVE.RefreshNotif()
+    local pnl = SMISSIVE.EnsureNotifPanel()
+    if not IsValid(pnl) then return end
+    local show = (SMISSIVE.UnreadCount or 0) > 0 and not IsValid(SMISSIVE.InboxFrame)
+    pnl:SetVisible(show)
+end
+
+----------------------------------------------------------------------
+-- Touche F3 : bascule la souris libre/capturée (comme le ferait un menu,
+-- mais sans en ouvrir un). N'ouvre PAS la boîte de réception directement.
+----------------------------------------------------------------------
+SMISSIVE.MouseFree = SMISSIVE.MouseFree or false
+
+local function setMouseFree(v)
+    SMISSIVE.MouseFree = v and true or false
+    gui.EnableScreenClicker(SMISSIVE.MouseFree)
+end
+SMISSIVE.SetMouseFree = setMouseFree
 
 local f3Down = false
-hook.Add("Think", "SANGMISSIVE_F3Key", function()
+hook.Add("Think", "SANGMISSIVE_F3Toggle", function()
     local down = input.IsKeyDown(KEY_F3)
     if down and not f3Down then
         f3Down = true
-        if IsValid(SMISSIVE.InboxFrame) then
-            SMISSIVE.InboxFrame:Remove()
-        elseif not vgui.CursorVisible() and not gui.IsGameUIVisible() then
-            SMISSIVE.RequestInbox()
+        if not gui.IsGameUIVisible() then
+            setMouseFree(not SMISSIVE.MouseFree)
         end
     elseif not down then
         f3Down = false
     end
 end)
 
+-- Fallback console (utile pour un bind personnalisé côté joueur/serveur).
 concommand.Add("sang_missives", function() SMISSIVE.RequestInbox() end)
+concommand.Add("sang_missives_mouse", function() setMouseFree(not SMISSIVE.MouseFree) end)

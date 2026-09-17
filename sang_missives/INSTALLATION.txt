@@ -36,22 +36,30 @@ UTILISATION
   Chaque option ouvre une fenêtre de rédaction (objet + texte, avec compteur
   de caractères) puis envoie la missive au clic sur "Envoyer".
 
-- « Ma boîte aux lettres » (bouton en bas du menu, ou touche [F3] depuis
-  n'importe où — voir ci-dessous) : liste les missives reçues par le
-  PERSONNAGE actif (personnelles + celles de sa faction). Clique une
-  missive pour la lire.
+- « Ma boîte aux lettres » (bouton en bas du menu) : liste les missives
+  reçues par le PERSONNAGE actif (personnelles + celles de sa faction).
+  Clique une missive pour la lire, puis « Supprimer cette missive » si tu
+  veux t'en débarrasser — sinon elle reste dans la boîte indéfiniment
+  (déjà lue, mais conservée). Une missive de faction supprimée par un
+  membre reste visible pour les autres : la suppression n'est jamais
+  partagée.
 
-- Livraison : si le(s) destinataire(s) sont connectés, ils reçoivent une
-  notification immédiate + un encart en haut à droite de l'écran ("X
-  missive(s) non lue(s) — Appuie sur [F3] pour lire"). Cet encart reste
-  affiché (y compris après une reconnexion) tant qu'il reste des missives
-  non lues. Sinon, la missive reste en attente et apparaît à la prochaine
-  ouverture de la boîte de réception.
+- Livraison + notification persistante : si le(s) destinataire(s) sont
+  connectés, ils reçoivent une notification immédiate (toast) ET un encart
+  cliquable en haut à droite de l'écran ("X missive(s) non lue(s)"). Cet
+  encart reste affiché — y compris après une reconnexion — tant qu'il
+  reste des missives non lues. Sinon, la missive attend simplement d'être
+  vue à la prochaine ouverture de la boîte de réception.
 
-  NB : GMod ne permet pas de "cliquer" une pastille HUD pendant qu'on joue
-  (la souris sert à regarder). La touche [F3] fait donc office de clic —
-  exactement comme [F4] pour le menu des jobs. Elle s'ouvre/se ferme aussi
-  via la commande console "sang_missives" (utile pour un bind personnalisé).
+  Pour lire depuis l'encart : appuie sur [F3] (ça libère la souris, sans
+  ouvrir aucun menu — exactement ce que fait GMod pour le viseur du
+  scanner Combine), puis clique sur l'encart. La souris redevient libre
+  pour la caméra automatiquement à la fermeture de la boîte de réception
+  (ou avec un second [F3]). [F3] ne fait qu'un aller-retour souris
+  libre/capturée : il n'ouvre jamais la boîte de réception tout seul.
+
+  NB : le bouton "Ma boîte aux lettres" du bureau des missives reste le
+  moyen le plus direct de consulter sa boîte sans passer par [F3].
 
 --------------------------------------------------------------------------
 RÉGLAGES  (lua/sang_missive/sh_config.lua)
