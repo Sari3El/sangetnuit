@@ -9,8 +9,11 @@
 
 SMISSIVE = SMISSIVE or {}
 SMISSIVE.Inbox = SMISSIVE.Inbox or {}
+SMISSIVE.UnreadCount = SMISSIVE.UnreadCount or 0
 
 surface.CreateFont("SangMissive_Hint", { font = "Georgia", size = 20, weight = 700, antialias = true, extended = true })
+surface.CreateFont("SangMissive_BadgeTitle", { font = "Georgia", size = 17, weight = 700, antialias = true, extended = true })
+surface.CreateFont("SangMissive_BadgeHint",  { font = "Georgia", size = 13, weight = 600, antialias = true, extended = true, italic = true })
 
 local function uiReady() return BLOOD and BLOOD.UI end
 
@@ -375,3 +378,57 @@ hook.Add("HUDPaint", "SANGMISSIVE_Hint", function()
     draw.SimpleText("[E] Rédiger une missive", "SangMissive_Hint", cx + 1, cy + 41, sh, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
     draw.SimpleText("[E] Rédiger une missive", "SangMissive_Hint", cx, cy + 40, gold, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 end)
+
+----------------------------------------------------------------------
+-- Badge HUD persistant : apparaît dès qu'une missive non lue est en
+-- attente (reçue en temps réel ou déjà en attente à la connexion), où que
+-- soit le joueur. Touche F3 pour ouvrir directement la boîte de réception
+-- (la souris n'étant pas disponible en jeu, on ne peut pas "cliquer" un
+-- élément de HUD à proprement parler : la touche fait office de clic).
+----------------------------------------------------------------------
+net.Receive("sang_missive_badge", function()
+    SMISSIVE.UnreadCount = net.ReadUInt(16)
+end)
+
+hook.Add("HUDPaint", "SANGMISSIVE_Badge", function()
+    local n = SMISSIVE.UnreadCount or 0
+    if n <= 0 or not uiReady() then return end
+    local ply = LocalPlayer()
+    if not IsValid(ply) or not ply:Alive() then return end
+
+    local UI, C = BLOOD.UI, BLOOD.UI.Col
+    local S = UI.Scale
+
+    local w, h = S(240), S(50)
+    local x, y = ScrW() - w - S(24), S(24)
+
+    -- Léger effet de pulsation pour attirer l'œil sans être criard.
+    local pulse = 0.5 + 0.5 * math.sin(CurTime() * 3)
+
+    UI.VGradient(x, y, w, h, UI.Shade(C.bg2, 6), C.bg0)
+    surface.SetDrawColor(C.ink); surface.DrawOutlinedRect(x, y, w, h, 1)
+    surface.SetDrawColor(Lerp(pulse, C.goldDk.r, C.goldLt.r), Lerp(pulse, C.goldDk.g, C.goldLt.g), Lerp(pulse, C.goldDk.b, C.goldLt.b))
+    surface.DrawOutlinedRect(x + 1, y + 1, w - 2, h - 2, 1)
+    surface.SetDrawColor(C.blood); surface.DrawRect(x, y, S(3), h)
+
+    local label = n .. " missive" .. (n > 1 and "s" or "") .. " non lue" .. (n > 1 and "s" or "")
+    draw.SimpleText(label, "SangMissive_BadgeTitle", x + S(14), y + S(13), C.goldLt, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+    draw.SimpleText("Appuie sur [F3] pour lire", "SangMissive_BadgeHint", x + S(14), y + S(35), C.txtDim, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+end)
+
+local f3Down = false
+hook.Add("Think", "SANGMISSIVE_F3Key", function()
+    local down = input.IsKeyDown(KEY_F3)
+    if down and not f3Down then
+        f3Down = true
+        if IsValid(SMISSIVE.InboxFrame) then
+            SMISSIVE.InboxFrame:Remove()
+        elseif not vgui.CursorVisible() and not gui.IsGameUIVisible() then
+            SMISSIVE.RequestInbox()
+        end
+    elseif not down then
+        f3Down = false
+    end
+end)
+
+concommand.Add("sang_missives", function() SMISSIVE.RequestInbox() end)

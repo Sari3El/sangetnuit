@@ -66,6 +66,25 @@ function SMISSIVE.OpenMenu(ply)
 end
 
 ----------------------------------------------------------------------
+-- Pousse au client le nombre de missives non lues (badge HUD persistant).
+----------------------------------------------------------------------
+function SMISSIVE.PushBadge(ply)
+    if not IsValid(ply) or not ply:IsPlayer() then return end
+    net.Start("sang_missive_badge")
+        net.WriteUInt(math.min(SMISSIVE.CountUnread(ply), 999), 16)
+    net.Send(ply)
+end
+
+-- Au spawn (connexion, respawn, changement/création de personnage — tous
+-- passent par ply:Spawn()), une fois le job/faction du slot actif recalculé.
+hook.Add("PlayerSpawn", "SMISSIVE_BadgeOnSpawn", function(ply)
+    local delay = (BLOOD and BLOOD.Config and BLOOD.Config.ApplyDelay or 0.15) + 0.25
+    timer.Simple(delay, function()
+        if IsValid(ply) then SMISSIVE.PushBadge(ply) end
+    end)
+end)
+
+----------------------------------------------------------------------
 -- Envoi d'une missive
 ----------------------------------------------------------------------
 SMISSIVE.NetReceive("sang_missive_send", 0, function(_, ply)
@@ -139,12 +158,14 @@ SMISSIVE.NetReceive("sang_missive_send", 0, function(_, ply)
         local target = BLOOD.GetPlayerBySteamID64(m.targetSid)
         if IsValid(target) then
             notify(target, "Nouvelle missive personnelle de " .. senderName .. " : « " .. subject .. " ».", "info")
+            SMISSIVE.PushBadge(target)
         end
     else
         local facName = SMISSIVE.FactionName(m.targetFaction)
         for _, p in ipairs(player.GetAll()) do
             if p ~= ply and BLOOD.HasCharacter(p) and myFaction(p) == m.targetFaction then
                 notify(p, "Nouvelle missive " .. KIND_LABEL[kind] .. " pour " .. facName .. " — « " .. subject .. " ».", "info")
+                SMISSIVE.PushBadge(p)
             end
         end
     end
@@ -180,4 +201,5 @@ SMISSIVE.NetReceive("sang_missive_inbox_req", 0.5, function(_, ply)
     net.Send(ply)
 
     if maxId > cursor then SMISSIVE.SQL.SetCursor(sid, slot, maxId) end
+    SMISSIVE.PushBadge(ply)
 end)

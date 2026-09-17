@@ -36,13 +36,22 @@ UTILISATION
   Chaque option ouvre une fenêtre de rédaction (objet + texte, avec compteur
   de caractères) puis envoie la missive au clic sur "Envoyer".
 
-- « Ma boîte aux lettres » (bouton en bas du menu) : liste les missives
-  reçues par le PERSONNAGE actif (personnelles + celles de sa faction),
-  avec un badge du nombre de non-lues. Clique une missive pour la lire.
+- « Ma boîte aux lettres » (bouton en bas du menu, ou touche [F3] depuis
+  n'importe où — voir ci-dessous) : liste les missives reçues par le
+  PERSONNAGE actif (personnelles + celles de sa faction). Clique une
+  missive pour la lire.
 
 - Livraison : si le(s) destinataire(s) sont connectés, ils reçoivent une
-  notification immédiate. Sinon, la missive reste en attente et apparaît
-  dans leur boîte de réception à la prochaine ouverture.
+  notification immédiate + un encart en haut à droite de l'écran ("X
+  missive(s) non lue(s) — Appuie sur [F3] pour lire"). Cet encart reste
+  affiché (y compris après une reconnexion) tant qu'il reste des missives
+  non lues. Sinon, la missive reste en attente et apparaît à la prochaine
+  ouverture de la boîte de réception.
+
+  NB : GMod ne permet pas de "cliquer" une pastille HUD pendant qu'on joue
+  (la souris sert à regarder). La touche [F3] fait donc office de clic —
+  exactement comme [F4] pour le menu des jobs. Elle s'ouvre/se ferme aussi
+  via la commande console "sang_missives" (utile pour un bind personnalisé).
 
 --------------------------------------------------------------------------
 RÉGLAGES  (lua/sang_missive/sh_config.lua)
