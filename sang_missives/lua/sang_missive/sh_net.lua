@@ -8,6 +8,7 @@ if SERVER then
     util.AddNetworkString("sang_missive_inbox_req")  -- C->S : demander la boîte de réception
     util.AddNetworkString("sang_missive_inbox_data") -- S->C : contenu de la boîte de réception
     util.AddNetworkString("sang_missive_badge")      -- S->C : met à jour le badge HUD (nb de non-lues)
+    util.AddNetworkString("sang_missive_badge_req")  -- C->S : redemande le badge (resynchro après chargement)
     util.AddNetworkString("sang_missive_dismiss")    -- C->S : supprimer une missive de SA boîte
 
     -- Anti-abus réseau générique (même logique que BLOOD.NetReceive du cœur ;

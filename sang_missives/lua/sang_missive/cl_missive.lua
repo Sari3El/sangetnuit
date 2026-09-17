@@ -447,6 +447,26 @@ net.Receive("sang_missive_badge", function()
     SMISSIVE.RefreshNotif()
 end)
 
+-- Resynchro de sécurité : si le push serveur fait au spawn arrive AVANT que
+-- ce fichier ait fini de se charger, GMod le jette silencieusement (aucune
+-- file d'attente pour un net.Receive pas encore enregistré). On redemande
+-- donc l'état une fois sûr que tout est chargé (InitPostEntity), avec un
+-- second essai un peu plus tard par sécurité.
+local function requestBadgeSync()
+    net.Start("sang_missive_badge_req")
+    net.SendToServer()
+end
+
+hook.Add("InitPostEntity", "SANGMISSIVE_BadgeSync", function()
+    timer.Simple(2, requestBadgeSync)
+    timer.Simple(8, requestBadgeSync)
+end)
+
+-- Filet de sécurité : re-synchro toutes les 30s, pour qu'un message perdu
+-- (quelle qu'en soit la cause) se rattrape tout seul rapidement plutôt que
+-- de laisser l'encart désynchronisé jusqu'à la prochaine missive/relog.
+timer.Create("SANGMISSIVE_BadgeHeartbeat", 30, 0, requestBadgeSync)
+
 function SMISSIVE.EnsureNotifPanel()
     if IsValid(SMISSIVE.NotifPanel) then return SMISSIVE.NotifPanel end
     if not uiReady() then return end

@@ -63,6 +63,7 @@ function SMISSIVE.OpenMenu(ply)
     net.Start("sang_missive_open")
         net.WriteUInt(math.min(SMISSIVE.CountUnread(ply), 999), 16)
     net.Send(ply)
+    SMISSIVE.PushBadge(ply) -- resynchronise aussi l'encart persistant
 end
 
 ----------------------------------------------------------------------
@@ -82,6 +83,14 @@ hook.Add("PlayerSpawn", "SMISSIVE_BadgeOnSpawn", function(ply)
     timer.Simple(delay, function()
         if IsValid(ply) then SMISSIVE.PushBadge(ply) end
     end)
+end)
+
+-- Resynchro à la demande : le client la déclenche une fois son Lua
+-- entièrement chargé (InitPostEntity), au cas où le push fait au spawn
+-- serait arrivé AVANT que son "net.Receive" soit enregistré (dans ce cas,
+-- GMod jette silencieusement le message réseau — pas de file d'attente).
+SMISSIVE.NetReceive("sang_missive_badge_req", 1, function(_, ply)
+    SMISSIVE.PushBadge(ply)
 end)
 
 ----------------------------------------------------------------------
