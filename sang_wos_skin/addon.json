@@ -1,0 +1,6 @@
+{
+    "title": "Sang et Nuit — wiltOS Skin (médiéval)",
+    "type": "servercontent",
+    "tags": ["roleplay", "fun"],
+    "ignore": ["*.md", "*.txt", ".git/*", ".gitignore"]
+}
