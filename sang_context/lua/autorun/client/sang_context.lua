@@ -47,6 +47,10 @@ end
 hook.Add("CalcView", "SangCtx_ThirdPerson", function(ply, pos, angles, fov)
     if not cv_enabled:GetBool() then return end
     if not (IsValid(ply) and ply:Alive()) or ply:InVehicle() then return end
+    -- Certains addons (ex. wiltOS, module « skills ») appellent CalcView à la
+    -- main pendant leur Paint, sans passer une position/des angles valides.
+    -- On ignore ces appels : sinon `pos.x` plante à chaque frame.
+    if not (isvector(pos) and isangle(angles)) then return end
 
     if not delayPos then delayPos = pos end
 
