@@ -139,3 +139,55 @@ local function addPage(t)
     table.insert(BLOOD.Origines.pages, t)
 end
 addPage({ id = "configperso", label = "Config Perso", order = 3, kind = "gold", build = buildConfigPerso })
+
+-- Inscription idempotente d'une section « Gestion Joueurs » (anti-doublon).
+local function addPlayer(fn, id)
+    if BLOOD.Origines.AddPlayerSection then return BLOOD.Origines.AddPlayerSection(fn, id) end
+    BLOOD.Origines.playerSections = BLOOD.Origines.playerSections or {}
+    BLOOD.Origines._playerIds = BLOOD.Origines._playerIds or {}
+    local ids = BLOOD.Origines._playerIds
+    if id and ids[id] then BLOOD.Origines.playerSections[ids[id]] = fn return end
+    table.insert(BLOOD.Origines.playerSections, fn)
+    if id then ids[id] = #BLOOD.Origines.playerSections end
+end
+
+----------------------------------------------------------------------
+-- Gestion Joueurs : JOB DE SPAWN (par slot) — définit le job persistant du slot
+----------------------------------------------------------------------
+addPlayer(function(p, ctx)
+    local UI, C, S = BLOOD.UI, BLOOD.UI.Col, BLOOD.UI.Scale
+    BLOOD.Origines.SectionLabel(p, "Job de spawn  (par slot)")
+    BLOOD.Origines.FieldLabel(p, "Définit le job appliqué quand le joueur joue ce slot. Persistant, marche même hors-ligne.")
+
+    local row = vgui.Create("DPanel", p)
+    row:Dock(TOP) row:DockMargin(0, S(2), S(6), S(4)) row:SetTall(S(28)) row.Paint = function() end
+
+    local slotC = vgui.Create("DComboBox", row)
+    slotC:Dock(LEFT) slotC:SetWide(S(140)) UI.SkinCombo(slotC)
+    local maxS = (BLOOD.Config and BLOOD.Config.MaxSlots) or 4
+    for i = 1, maxS do slotC:AddChoice("Slot " .. i, i) end
+    slotC:ChooseOptionID(1)
+
+    local jobC = vgui.Create("DComboBox", row)
+    jobC:Dock(FILL) jobC:DockMargin(S(8), 0, 0, 0) UI.SkinCombo(jobC)
+    for _, j in ipairs(SJOB.Config.Jobs) do
+        local fac = SJOB.Config.FactionNames[j.faction] or j.faction
+        jobC:AddChoice(fac .. "  —  " .. j.name, j.id)
+    end
+    jobC:ChooseOptionID(1)
+
+    local btn = vgui.Create("DButton", p)
+    btn:Dock(TOP) btn:DockMargin(0, 0, S(6), S(8)) btn:SetTall(S(30))
+    btn:SetText("Définir le job de ce slot")
+    UI.SkinButton(btn, "gold")
+    btn.DoClick = function()
+        local _, s   = slotC:GetSelected()
+        local _, jid = jobC:GetSelected()
+        if not jid then return end
+        net.Start("sjob_admin_setjob")
+            net.WriteString(ctx.GetSid and ctx.GetSid() or "")
+            net.WriteUInt(tonumber(s) or 1, 8)
+            net.WriteString(jid)
+        net.SendToServer()
+    end
+end, "sjob_setjob")
