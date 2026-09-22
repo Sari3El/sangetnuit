@@ -78,6 +78,31 @@ concommand.Add("sang_wos_animdiag", function()
     else
         MsgN("  (aucun !)")
     end
+
+    MsgN("---- Séquences du modèle (recherche anims wiltOS) ----")
+    local total = ply:GetSequenceCount() or 0
+    MsgN("Total séquences sur le modèle : " .. total)
+    local pats = { "phalanx", "judge", "balanced", "melee", "cwalk",
+                   "zen", "dual", "slam", "retarget", "blade", "saber",
+                   "combat", "wos", "riddick" }
+    local found = 0
+    for i = 0, total - 1 do
+        local nm = ply:GetSequenceName(i) or ""
+        local low = string.lower(nm)
+        for _, p in ipairs(pats) do
+            if string.find(low, p, 1, true) then
+                MsgN(string.format("  [%d] %s", i, nm))
+                found = found + 1
+                break
+            end
+        end
+    end
+    if found == 0 then
+        MsgN("  >> AUCUNE séquence wiltOS/Blade Symphony sur ce modèle <<")
+    else
+        MsgN("  (" .. found .. " séquence(s) potentiellement wiltOS trouvée(s))")
+    end
+
     MsgN("================================================")
     MsgN("Copie tout ce bloc et envoie-le.")
 end)
