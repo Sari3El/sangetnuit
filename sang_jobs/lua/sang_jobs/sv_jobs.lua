@@ -100,8 +100,6 @@ hook.Add("PlayerSpawn", "SJOB_SetModel", function(ply)
         if m and ply:GetModel() ~= m then
             util.PrecacheModel(m)
             ply:SetModel(m)
-            -- Réinitialise les hitboxes/anim après le changement de modèle.
-            ply:SetupBones()
         end
     end)
 end)
