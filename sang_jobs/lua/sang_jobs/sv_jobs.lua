@@ -80,6 +80,33 @@ hook.Add("PlayerLoadout", "SJOB_Loadout", function(ply)
 end)
 
 ----------------------------------------------------------------------
+-- Modèle joueur : appliqué à TOUS les jobs au spawn (temporaire, en
+-- attendant les animations wiltOS). Un job peut définir job.model pour
+-- surcharger ; sinon on prend C.DefaultModel.
+----------------------------------------------------------------------
+function SJOB.GetJobModel(ply)
+    local j = SJOB.GetJob(ply.SJob or C.DefaultJob)
+    local m = (j and j.model) or C.DefaultModel
+    if not m or m == "" then return nil end
+    return m
+end
+
+hook.Add("PlayerSpawn", "SJOB_SetModel", function(ply)
+    if not IsValid(ply) then return end
+    -- Tick suivant : on passe APRÈS le PlayerSetModel du sandbox pour gagner.
+    timer.Simple(0, function()
+        if not IsValid(ply) then return end
+        local m = SJOB.GetJobModel(ply)
+        if m and ply:GetModel() ~= m then
+            util.PrecacheModel(m)
+            ply:SetModel(m)
+            -- Réinitialise les hitboxes/anim après le changement de modèle.
+            ply:SetupBones()
+        end
+    end)
+end)
+
+----------------------------------------------------------------------
 -- (Changement de job par le joueur DÉSACTIVÉ)
 --   Le F4 est retiré et le net « sjob_set » n'existe plus : seul le staff
 --   peut définir le job d'un slot (via Origines / sjob_admin_setjob).

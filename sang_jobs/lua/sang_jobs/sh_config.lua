@@ -24,6 +24,11 @@ C.DefaultJob     = "sansfaction" -- job de départ d'un nouveau personnage
 C.ChangeCooldown = 2             -- (inutilisé : le joueur ne change plus de job)
 C.EventJob       = "event"       -- job par défaut du slot EVENT
 
+-- Modèle joueur appliqué à TOUS les jobs (temporaire, en attendant les
+-- animations wiltOS). Mets ici le chemin du modèle voulu ; laisse "" pour
+-- ne rien forcer. (On pourra plus tard définir un modèle PAR job.)
+C.DefaultModel   = "models/player/group01/male_07.mdl"
+
 -- Factions (regroupement scoreboard + banques).
 C.FactionOrder = { "empire", "creatures", "consortium", "none", "event" }
 C.FactionNames = {
