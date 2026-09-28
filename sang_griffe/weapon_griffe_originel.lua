@@ -63,3 +63,11 @@ SWEP.ForcePowerList = { "Force Leap" } -- pouvoirs (à définir plus tard)
 
 SWEP.UseSkills = true
 SWEP.PersonalLightsaber = false -- sabre FIXE (pas lié au perso wiltOS)
+
+-- Formes forcées pour CE sabre (contourne les usergroups/skills wiltOS) :
+-- la forme « Agile » avec ses TROIS stances (Agile 1, Agile 2, Agile 3).
+-- Format wiltOS : [ "NomDeLaForme" ] = { stance1, stance2, stance3 }
+-- (indispensable sur un sabre fixe : sans ça, aucune forme n'est dispo.)
+SWEP.UseForms = {
+	["Agile"] = { 1, 2, 3 },
+}

@@ -19,6 +19,7 @@ wos-sentinel-orig/lua/weapons/weapon_griffe_originel.lua
 
 - Base : `wos_adv_single_lightsaber_base` (sabre simple, non dual)
 - `SWEP.PersonalLightsaber = false` — sabre **fixe** (pas lié au perso wiltOS)
+- `SWEP.UseForms = { ["Agile"] = { 1, 2, 3 } }` — force les **3 stances de la forme Agile** (indispensable sur un sabre fixe, sinon aucune forme)
 - `SWEP.ForcePowerList = { "Force Leap" }` — pouvoirs à définir plus tard
 - Modèles **placeholder** (repris du sabre personnel) — les vraies griffes viendront après
 - `SWEP.Spawnable = true` + `SWEP.AdminOnly = true` — spawn réservé au staff
