@@ -51,8 +51,14 @@ local function tryWrap()
     wrapHook("PostPlayerDraw",   "wOS.Lightsaber.HolsterDrawing", lightsabersReady)
 end
 
--- Le crypt (donc les hooks wiltOS) se charge tard : on retente plusieurs fois.
+-- Le crypt wiltOS (déchiffrement réseau) peut enregistrer ses hooks BIEN
+-- après le spawn — parfois au-delà de 45 s au 1er chargement. Un simple lot de
+-- timer.Simple() peut donc rater la fenêtre. On installe un timer répétitif
+-- permanent : tryWrap() est idempotent (ne ré-enveloppe que si nécessaire) et
+-- son coût une fois stable = une lecture de table toutes les 3 s (négligeable).
+-- Ça couvre aussi une éventuelle ré-inscription tardive du hook par wiltOS.
 timer.Simple(2, tryWrap)
+timer.Create("SangWOS_GuardWrap_Repeat", 3, 0, tryWrap)
 hook.Add("InitPostEntity", "SangWOS_GuardWrap", function()
     for _, t in ipairs({ 1, 3, 6, 12, 20, 30, 45 }) do timer.Simple(t, tryWrap) end
 end)

@@ -61,7 +61,11 @@ SWEP.RegenSpeed = 1   -- multiplicateur de régénération
 SWEP.CanKnockback = true -- repousse les cibles touchées
 SWEP.ForcePowerList = { "Force Leap" } -- pouvoirs (à définir plus tard)
 
-SWEP.UseSkills = true
+-- IMPORTANT : UseSkills DOIT être false pour un sabre à formes imposées.
+-- wiltOS ne lit SWEP.UseForms que si UseSkills == false (voir OpenFormMenu).
+-- Si UseSkills = true, le menu de formes part chercher wOS.Forms (synchro
+-- réseau, souvent pas encore arrivée) -> crash "dat (a nil value)".
+SWEP.UseSkills = false
 SWEP.PersonalLightsaber = false -- sabre FIXE (pas lié au perso wiltOS)
 
 -- Formes forcées pour CE sabre (contourne les usergroups/skills wiltOS) :
