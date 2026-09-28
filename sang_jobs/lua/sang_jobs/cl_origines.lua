@@ -177,9 +177,25 @@ addPlayer(function(p, ctx)
     jobC:ChooseOptionID(1)
 
     local btn = vgui.Create("DButton", p)
-    btn:Dock(TOP) btn:DockMargin(0, 0, S(6), S(8)) btn:SetTall(S(30))
+    btn:Dock(TOP) btn:DockMargin(0, 0, S(6), S(6)) btn:SetTall(S(30))
     btn:SetText("Définir le job de ce slot")
     UI.SkinButton(btn, "gold")
+
+    -- Affichage : job ENREGISTRÉ de chaque slot (lecture SQL, marche hors-ligne).
+    local box = vgui.Create("DPanel", p)
+    box:Dock(TOP) box:DockMargin(0, 0, S(6), S(6)) box:SetTall(S(122))
+    box.Paint = function(_, w, h)
+        UI.VGradient(0, 0, w, h, C.bg2, C.bg0)
+        surface.SetDrawColor(C.goldDk) surface.DrawOutlinedRect(0, 0, w, h, 1)
+    end
+    SJOB._slotJobBox = box
+
+    local function reqSlots()
+        local sid = ctx.GetSid and ctx.GetSid() or ""
+        if sid == "" then return end
+        net.Start("sjob_admin_getslots") net.WriteString(sid) net.SendToServer()
+    end
+
     btn.DoClick = function()
         local _, s   = slotC:GetSelected()
         local _, jid = jobC:GetSelected()
@@ -189,5 +205,37 @@ addPlayer(function(p, ctx)
             net.WriteUInt(tonumber(s) or 1, 8)
             net.WriteString(jid)
         net.SendToServer()
+        timer.Simple(0.15, reqSlots) -- rafraîchit l'affichage
     end
+
+    local refresh = vgui.Create("DButton", p)
+    refresh:Dock(TOP) refresh:DockMargin(0, 0, S(6), S(8)) refresh:SetTall(S(26))
+    refresh:SetText("Voir / rafraîchir les jobs par slot")
+    UI.SkinButton(refresh, "default")
+    refresh.DoClick = reqSlots
+
+    timer.Simple(0.25, reqSlots) -- charge à l'ouverture de la section
 end, "sjob_setjob")
+
+-- Réception : remplit le panneau avec le job de chaque slot.
+net.Receive("sjob_slots_info", function()
+    local UI, C, S = BLOOD.UI, BLOOD.UI.Col, BLOOD.UI.Scale
+    local _sid    = net.ReadString()
+    local maxSlot = net.ReadUInt(8)
+    local jobs = {}
+    for s = 1, maxSlot do jobs[s] = net.ReadString() end
+
+    local box = SJOB._slotJobBox
+    if not IsValid(box) then return end
+    box:Clear()
+    local es = BLOOD.Config and BLOOD.Config.EventSlot
+    for s = 1, maxSlot do
+        local j = SJOB.GetJob(jobs[s])
+        local fac = j and (SJOB.Config.FactionNames[j.faction] or j.faction) or ""
+        local title = (s == es) and "Slot EVENT" or ("Slot " .. s)
+        local l = vgui.Create("DLabel", box)
+        l:Dock(TOP) l:DockMargin(S(8), (s == 1) and S(6) or S(1), S(8), S(1))
+        l:SetFont("SangUI_Small") l:SetTextColor(C.txt)
+        l:SetText(title .. "   →   " .. (j and (fac .. " — " .. j.name) or jobs[s]))
+    end
+end)

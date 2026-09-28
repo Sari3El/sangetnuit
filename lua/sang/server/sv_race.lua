@@ -78,6 +78,24 @@ end
 BLOOD.LoadRarity()
 
 ----------------------------------------------------------------------
+-- Codex des sangs (public) : envoie les % de rareté ACTUELS à tout joueur
+-- qui les demande (menu perso). Toujours à jour : recalculé depuis les poids
+-- courants (donc reflète les modifs admin de rareté).
+----------------------------------------------------------------------
+net.Receive("blood_req_rarity_pub", function(_, ply)
+    if not IsValid(ply) then return end
+    local races = BLOOD.Config.Races or {}
+    net.Start("blood_rarity_pub")
+        net.WriteUInt(#races, 8)
+        for _, r in ipairs(races) do
+            net.WriteString(r.id)
+            net.WriteFloat(BLOOD.RarityChance(r.id))
+            net.WriteString((BLOOD.Config.RaceTiers and BLOOD.Config.RaceTiers[r.id]) or "")
+        end
+    net.Send(ply)
+end)
+
+----------------------------------------------------------------------
 -- Diagnostic : affiche le détail du calcul des stats d'un joueur.
 --   Console serveur : sang_debug_stats [me|steamid]
 --   En jeu (admin)  : sang_debug_stats            (sur soi)
@@ -176,6 +194,7 @@ function BLOOD.ComputeStats(ply)
         baseRun  = C.BaseRunSpeed,
         hpMul    = race.hp or 1,      -- race (× niveau ensuite)
         speedMul = race.speed or 1,   -- race (× job × niveau ensuite)
+        manaMax  = race.mana or 0,    -- réservoir de mana de base (par la RACE)
     }
     hook.Run("BLOOD_ComputeStats", ply, stats)
     return stats
@@ -232,7 +251,9 @@ function BLOOD.ApplyComputedStats(ply, fullHeal)
     -- régénéré par sv_mana.
     --   fullHeal : plein.  Rafraîchissement : on garde la mana courante (rien
     --   n'est rendu), simplement bornée au nouveau max.
-    local manaMax = math.max(0, ov.mana or 0)
+    -- Base = mana de la RACE (ex. Arcanique = 100) ; l'override (par slot+job)
+    -- reste prioritaire s'il est défini.
+    local manaMax = math.max(0, ov.mana or s.manaMax or 0)
     ply:SetNWInt("blood_mana_max", manaMax)
     local curMana = fullHeal and manaMax or math.min(ply.BloodMana or 0, manaMax)
     ply.BloodMana = curMana

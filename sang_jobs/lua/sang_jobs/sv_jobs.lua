@@ -175,6 +175,21 @@ SJOB.NetReceive("sjob_admin_clearoverride", 0.3, function(_, ply)
     notify(ply, "Override effacé (" .. sid .. " / " .. jobId .. ").", "info")
 end)
 
+-- Requête : le job ENREGISTRÉ de CHAQUE slot (lecture SQL, marche hors-ligne).
+SJOB.NetReceive("sjob_admin_getslots", 0.2, function(_, ply)
+    if not isAdmin(ply) then return end
+    local sid = BLOOD.NormalizeSteamID(net.ReadString())
+    if not sid then return end
+    local maxSlot = (BLOOD and BLOOD.Config and BLOOD.Config.EventSlot) or 5
+    net.Start("sjob_slots_info")
+        net.WriteString(sid)
+        net.WriteUInt(maxSlot, 8)
+        for s = 1, maxSlot do
+            net.WriteString(SJOB.SQL.GetCharJob(sid, s) or C.DefaultJob)
+        end
+    net.Send(ply)
+end)
+
 -- Requête : défauts du job + override actuel
 SJOB.NetReceive("sjob_query", 0.15, function(_, ply)
     if not isAdmin(ply) then return end

@@ -278,7 +278,8 @@ C.Races = {
         id = "sorcier", name = "Sang Arcanique", short = "Arcanique", rarity = "Très rare",
         min = 9991, max = 10000,
         hp = 0.8, speed = 0.9, dmgReduction = 0.0,
-        weapons = {}, -- module Sorcier (mana + sorts) hors périmètre
-        desc = "Né avec la magie dans le sang. Glass cannon + sorts + mana (à venir).",
+        mana = 100, -- réservoir de mana de base (glass cannon magique)
+        weapons = {}, -- sorts via addon sang_sorts
+        desc = "Né avec la magie dans le sang. Glass cannon + sorts. Réserve de mana : 100.",
     },
 }

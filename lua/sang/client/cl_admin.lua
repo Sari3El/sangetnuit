@@ -286,6 +286,30 @@ local function buildPlayerControls(body, races)
     UI.SkinButton(addMoney, "default")
     addMoney.DoClick = function() sendCovan(true) end
 
+    -- 6) Forcer le slot actif (joueur EN LIGNE)
+    sectionLabel(body, "6)  Forcer le slot actif  (joueur en ligne)")
+    fieldLabel(body, "Bascule le joueur sur ce personnage, comme s'il le sélectionnait lui-même.")
+    local rowActive = vgui.Create("DPanel", body)
+    rowActive:Dock(TOP) rowActive:DockMargin(0, S(2), S(6), S(6)) rowActive:SetTall(S(28))
+    rowActive.Paint = function() end
+    local slotActive = vgui.Create("DComboBox", rowActive)
+    slotActive:Dock(LEFT) slotActive:SetWide(S(180))
+    UI.SkinCombo(slotActive)
+    for i = 1, BLOOD.Config.MaxSlots do slotActive:AddChoice("Slot " .. i, i) end
+    if BLOOD.Config.EventSlot then slotActive:AddChoice("Slot EVENT", BLOOD.Config.EventSlot) end
+    slotActive:ChooseOptionID(1)
+    local activeBtn = vgui.Create("DButton", rowActive)
+    activeBtn:Dock(FILL) activeBtn:DockMargin(S(8), 0, 0, 0)
+    activeBtn:SetText("Forcer ce slot actif")
+    UI.SkinButton(activeBtn, "blood")
+    activeBtn.DoClick = function()
+        local _, slot = slotActive:GetSelected()
+        net.Start("origines_set_active_slot")
+        net.WriteString(sidEntry:GetValue() or "")
+        net.WriteUInt(tonumber(slot) or 1, 8)
+        net.SendToServer()
+    end
+
     -- (Les « Stats forcées du perso » sont dans l'onglet Config Perso.)
 
     return { GetSid = function() return string.Trim(sidEntry:GetValue() or "") end, sidEntry = sidEntry }

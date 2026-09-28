@@ -10,6 +10,8 @@ if SERVER then
     util.AddNetworkString("sjob_admin_clearoverride")
     util.AddNetworkString("sjob_query")           -- C->S : demander défaut + override
     util.AddNetworkString("sjob_query_result")    -- S->C : défaut + override
+    util.AddNetworkString("sjob_admin_getslots")  -- C->S : demander le job de CHAQUE slot
+    util.AddNetworkString("sjob_slots_info")      -- S->C : job enregistré de chaque slot
 
     -- Anti-abus réseau générique (même logique que BLOOD.NetReceive du coeur ;
     -- dupliqué ici car sang_jobs se charge indépendamment). La fenêtre anti-spam

@@ -242,6 +242,48 @@ BLOOD.NetReceive("origines_query_slot", 0.15, function(_, ply)
 end)
 
 ----------------------------------------------------------------------
+-- Action : forcer le SLOT ACTIF d'un joueur EN LIGNE (comme s'il le
+-- sélectionnait lui-même). Le « slot actif » n'a de sens qu'en jeu : hors-
+-- ligne, rien à forcer (le job/la race d'un slot se changent séparément).
+----------------------------------------------------------------------
+BLOOD.NetReceive("origines_set_active_slot", 0.5, function(_, ply)
+    if not BLOOD.IsAdmin(ply) then return end
+    local sid  = BLOOD.NormalizeSteamID(net.ReadString())
+    local slot = net.ReadUInt(8)
+    if not sid then BLOOD.Notify(ply, "SteamID cible invalide.", "error") return end
+
+    local target = BLOOD.GetPlayerBySteamID64(sid)
+    if not IsValid(target) then
+        BLOOD.Notify(ply, "Le joueur doit être EN LIGNE pour forcer son slot actif.", "error")
+        return
+    end
+
+    if slot == C.EventSlot then
+        BLOOD.SelectEventSlot(target, false)
+        logAdmin(ply:Nick() .. " (" .. ply:SteamID64() .. ") a forcé " .. sid .. " sur le slot EVENT")
+        BLOOD.Notify(target, "Un admin t'a basculé sur ton personnage EVENT.", "info")
+        BLOOD.Notify(ply, "Slot actif forcé : " .. sid .. " => EVENT.", "info")
+        return
+    end
+
+    if slot < 1 or slot > C.MaxSlots then return end
+    if not (target.BloodSlots and target.BloodSlots[slot]) then
+        BLOOD.Notify(ply, "Ce slot est vide chez la cible.", "error")
+        return
+    end
+
+    target.BloodActiveSlot = slot
+    BLOOD.SQL.SetActiveSlot(target:SteamID64(), slot)
+    BLOOD.SetLocked(target, false)
+    hook.Run("BLOOD_CharacterChanged", target, slot)
+    target:Spawn()
+    BLOOD.SyncPlayer(target)
+    logAdmin(ply:Nick() .. " (" .. ply:SteamID64() .. ") a forcé " .. sid .. " sur le slot " .. slot)
+    BLOOD.Notify(target, "Un admin t'a basculé sur ton personnage " .. slot .. ".", "info")
+    BLOOD.Notify(ply, "Slot actif forcé : " .. sid .. " => slot " .. slot .. ".", "info")
+end)
+
+----------------------------------------------------------------------
 -- Rareté des sangs : envoi de la table + modification (poids + palier)
 ----------------------------------------------------------------------
 local function sendRarity(ply)

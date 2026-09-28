@@ -19,6 +19,10 @@ if SERVER then
     util.AddNetworkString("blood_reroll_roll")     -- S->C (joueur) : lance la roulette
     util.AddNetworkString("blood_reroll_announce") -- S->C (tous) : annonce colorée
 
+    -- Codex des sangs (accessible à TOUS les joueurs) : % de rareté actuels
+    util.AddNetworkString("blood_req_rarity_pub")  -- C->S : demander les % de rareté
+    util.AddNetworkString("blood_rarity_pub")      -- S->C : % + palier de chaque sang
+
     -- Admin (Client -> Serveur, tout re-vérifié serveur-side)
     util.AddNetworkString("origines_give_credits")
     util.AddNetworkString("origines_set_race")
@@ -27,6 +31,7 @@ if SERVER then
     util.AddNetworkString("origines_set_covan")
     util.AddNetworkString("origines_query_slot")  -- C->S : infos d'un slot
     util.AddNetworkString("origines_slot_info")   -- S->C : nom/race/covan d'un slot
+    util.AddNetworkString("origines_set_active_slot") -- C->S : forcer le slot actif d'un joueur EN LIGNE
 
     -- Admin : édition de la rareté des sangs (Gestion serveur)
     util.AddNetworkString("origines_req_rarity")   -- C->S : demander la table de rareté

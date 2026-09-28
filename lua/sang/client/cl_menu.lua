@@ -77,6 +77,13 @@ function BLOOD.RefreshMenu()
         end
     end
 
+    -- Bouton : codex des sangs (raretés ACTUELLES + bonus de chaque sang)
+    local codexBtn = vgui.Create("DButton", body)
+    codexBtn:Dock(TOP) codexBtn:DockMargin(0, 0, 0, S(8)) codexBtn:SetTall(S(28))
+    codexBtn:SetText("Sangs & raretés  —  bonus & % actuels")
+    UI.SkinButton(codexBtn, "gold")
+    codexBtn.DoClick = function() BLOOD.OpenBloodCodex() end
+
     -- Liste des slots
     for i = 1, cfg.MaxSlots do
         local slot   = d.slots[i]
@@ -194,4 +201,101 @@ hook.Add("Think", "BLOOD_ForceCreateMenu", function()
     if BLOOD.MyData and BLOOD.MyData.mustCreate and not IsValid(BLOOD.MenuFrame) then
         BLOOD.OpenMenu()
     end
+end)
+
+----------------------------------------------------------------------
+-- CODEX DES SANGS : liste tous les sangs, leur rareté ACTUELLE (%) et leurs
+-- bonus/perks. Les % viennent du serveur (à jour même après modif admin).
+----------------------------------------------------------------------
+BLOOD._rarityPub = BLOOD._rarityPub or {}
+
+-- Bonus/perks d'un sang -> lignes lisibles (lues depuis la config partagée).
+function BLOOD.FormatRacePerks(r)
+    local out = {}
+    local function pc(mult) -- 1.15 -> "+15%" ; 0.8 -> "-20%"
+        local p = math.Round((mult - 1) * 100)
+        return (p >= 0 and "+" or "") .. p .. "%"
+    end
+    if r.hp and r.hp ~= 1 then out[#out + 1] = "PV " .. pc(r.hp) end
+    if r.speed and r.speed ~= 1 then out[#out + 1] = "Vitesse " .. pc(r.speed) end
+    if r.dmgReduction and r.dmgReduction > 0 then
+        out[#out + 1] = "Réduction de dégâts : " .. math.Round(r.dmgReduction * 100) .. "%"
+    end
+    if r.dmgBonus then
+        for _, b in ipairs(r.dmgBonus) do
+            out[#out + 1] = "Dégâts " .. table.concat(b.tags or {}, ", ") .. " " .. pc(b.mult or 1)
+        end
+    end
+    if r.dodge and r.dodge > 0 then out[#out + 1] = "Esquive : " .. math.Round(r.dodge * 100) .. "%" end
+    if r.regen and r.regen > 0 then out[#out + 1] = "Régénération : +" .. r.regen .. " PV/s" end
+    if r.magicResist and r.magicResist > 0 then out[#out + 1] = "Résistance magique : " .. math.Round(r.magicResist * 100) .. "%" end
+    if r.fireResist and r.fireResist > 0 then out[#out + 1] = "Résistance au feu : " .. math.Round(r.fireResist * 100) .. "%" end
+    if r.stealth then out[#out + 1] = "Furtivité" end
+    if r.mana and r.mana > 0 then out[#out + 1] = "Réserve de mana : " .. r.mana end
+    if r.weapons and #r.weapons > 0 then out[#out + 1] = "Arme spéciale de sang" end
+    if #out == 0 then out[#out + 1] = "Aucun bonus particulier." end
+    return out
+end
+
+function BLOOD.RefreshCodex()
+    local f = BLOOD.CodexFrame
+    if not IsValid(f) or not IsValid(f.CodexScroll) then return end
+    local scroll = f.CodexScroll
+    scroll:Clear()
+
+    -- Trier : plus RARE (% le plus bas) en haut.
+    local list = {}
+    for _, r in ipairs(BLOOD.Config.Races) do list[#list + 1] = r end
+    local function pctOf(r)
+        local pub = BLOOD._rarityPub[r.id]
+        if pub then return pub.pct end
+        return ((r.max or 0) - (r.min or 0) + 1) / 100 -- fallback config
+    end
+    table.sort(list, function(a, b) return pctOf(a) < pctOf(b) end)
+
+    for _, r in ipairs(list) do
+        local pub = BLOOD._rarityPub[r.id]
+        local pctTxt = pub and string.format("%.2f%%", pub.pct) or "…"
+        local perks = BLOOD.FormatRacePerks(r)
+
+        local card = vgui.Create("DPanel", scroll)
+        card:Dock(TOP) card:DockMargin(0, 0, S(6), S(6))
+        card:SetTall(S(34) + #perks * S(16) + S(6))
+        card.Paint = function(_, w, h)
+            UI.VGradient(0, 0, w, h, C.bg2, C.bg0)
+            surface.SetDrawColor(C.goldDk); surface.DrawOutlinedRect(0, 0, w, h, 1)
+            draw.SimpleText(r.name .. "  (" .. (r.short or "") .. ")", "SangUI_Body",
+                S(10), S(8), C.goldLt, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+            draw.SimpleText(pctTxt .. "   " .. (r.rarity or ""), "SangUI_Small",
+                w - S(10), S(10), C.txt, TEXT_ALIGN_RIGHT, TEXT_ALIGN_TOP)
+            local y = S(30)
+            for _, line in ipairs(perks) do
+                draw.SimpleText("•  " .. line, "SangUI_Small", S(14), y, C.txtDim, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+                y = y + S(16)
+            end
+        end
+    end
+end
+
+function BLOOD.OpenBloodCodex()
+    if not (BLOOD.UI and BLOOD.Races and BLOOD.Config) then return end
+    if IsValid(BLOOD.CodexFrame) then BLOOD.CodexFrame:Remove() end
+    BLOOD.CodexFrame = UI.MakeFrame(S(640), S(680), "Sangs & Raretés")
+    local scroll = vgui.Create("DScrollPanel", BLOOD.CodexFrame.Body)
+    scroll:Dock(FILL)
+    BLOOD.CodexFrame.CodexScroll = scroll
+    BLOOD.RefreshCodex()
+    net.Start("blood_req_rarity_pub") net.SendToServer() -- % à jour
+end
+
+net.Receive("blood_rarity_pub", function()
+    local n = net.ReadUInt(8)
+    BLOOD._rarityPub = {}
+    for _ = 1, n do
+        local id   = net.ReadString()
+        local pct  = net.ReadFloat()
+        local tier = net.ReadString()
+        BLOOD._rarityPub[id] = { pct = pct, tier = tier }
+    end
+    if IsValid(BLOOD.CodexFrame) then BLOOD.RefreshCodex() end
 end)
