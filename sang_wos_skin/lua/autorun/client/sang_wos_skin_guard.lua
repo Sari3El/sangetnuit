@@ -1,29 +1,63 @@
 --[[-------------------------------------------------------------------------
-    Sang et Nuit — wiltOS Skin : GARDE-FOU anti-spam (wOS.Lightsabers nil)
+    Sang et Nuit — wiltOS Skin : GARDE-FOU anti-spam (synchro client wiltOS)
 
       Quand la synchro réseau wiltOS n'est pas (encore) arrivée côté client,
-      « wOS.Lightsabers » est nil. Le hook PostPlayerDraw d'origine de wiltOS
-      (combat/cl_saberbase_hook.lua:270) fait alors « pairs(wOS.Lightsabers.General) »
-      sur un nil et SPAMME des milliers d'erreurs par seconde (perf + console).
+      certaines tables sont nil (wOS.Lightsabers, wOS.Form...) et des hooks
+      d'origine de wiltOS plantent à CHAQUE frame -> des milliers d'erreurs :
+        - PostPlayerDraw  "wOS.Lightsaber.HolsterDrawing"  (wOS.Lightsabers nil)
+        - CalcMainActivity "wOS.ALCS.ClientAnimations"     (wOS.Form nil)
 
-      Ici on fournit JUSTE une table vide par défaut, juste avant le dessin des
-      joueurs : le hook itère sur du vide (no-op) au lieu de planter. Dès que le
-      serveur envoie les vraies données (net.ReadTable), elles écrasent cette
-      table -> aucun impact sur le comportement wiltOS.
+      Ici on « enveloppe » ces hooks : tant que la donnée n'est pas prête, on
+      les SAUTE (pas de crash, comportement par défaut) ; dès qu'elle arrive,
+      on appelle l'original TEL QUEL -> aucun changement de comportement wiltOS.
+      Robuste au re-enregistrement et au chargement tardif du crypt (retries).
 
-      NE TOUCHE À RIEN d'autre : ni animations, ni combat, ni gameplay.
-      Désactivable : convar « sang_wos_guard 0 ».
+      NE TOUCHE À RIEN d'autre : ni animations, ni combat. Toggle : sang_wos_guard.
 ---------------------------------------------------------------------------]]
 
 if not CLIENT then return end
 
 local cv = CreateClientConVar("sang_wos_guard", "1", true, false)
 
-hook.Add("PrePlayerDraw", "SangWOS_LightsabersGuard", function()
-    if not cv:GetBool() then return end
-    -- Uniquement si wiltOS est là mais que la table n'est pas (encore) synchro.
-    if wOS and not (istable(wOS.Lightsabers) and istable(wOS.Lightsabers.General)) then
-        wOS.Lightsabers = istable(wOS.Lightsabers) and wOS.Lightsabers or {}
-        wOS.Lightsabers.General = wOS.Lightsabers.General or {}
+-- « Prêt » = les tables que le hook d'origine va indexer existent bien.
+local function lightsabersReady()
+    return istable(wOS) and istable(wOS.Lightsabers) and istable(wOS.Lightsabers.General)
+end
+local function formReady()
+    return istable(wOS) and istable(wOS.Form)
+        and istable(wOS.Form.LocalizedForms)
+        and istable(wOS.Form.Singles) and istable(wOS.Form.Duals)
+end
+
+local ourWrappers = {}
+
+-- Enveloppe le hook (event/name) : si pas prêt -> on saute ; sinon -> original.
+local function wrapHook(event, name, readyFn)
+    local tbl = hook.GetTable()[event]
+    local cur = tbl and tbl[name]
+    if not cur then return end                    -- pas encore enregistré (crypt tardif)
+    if ourWrappers[name] == cur then return end   -- déjà le nôtre en place
+    local orig = cur                              -- (peut être une nouvelle version wiltOS)
+    local wrapper = function(...)
+        if cv:GetBool() and not readyFn() then return end
+        return orig(...)
     end
+    ourWrappers[name] = wrapper
+    hook.Add(event, name, wrapper)
+end
+
+local function tryWrap()
+    wrapHook("CalcMainActivity", "wOS.ALCS.ClientAnimations", formReady)
+    wrapHook("PostPlayerDraw",   "wOS.Lightsaber.HolsterDrawing", lightsabersReady)
+end
+
+-- Le crypt (donc les hooks wiltOS) se charge tard : on retente plusieurs fois.
+timer.Simple(2, tryWrap)
+hook.Add("InitPostEntity", "SangWOS_GuardWrap", function()
+    for _, t in ipairs({ 1, 3, 6, 12, 20, 30, 45 }) do timer.Simple(t, tryWrap) end
+end)
+
+concommand.Add("sang_wos_guard_now", function()
+    tryWrap()
+    print("[sang_wos_skin] Garde-fou wiltOS (ré)appliqué.")
 end)
